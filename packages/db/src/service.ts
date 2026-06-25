@@ -1,6 +1,5 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@nacc/types/database";
 import { supabaseServiceKey, supabaseUrl } from "./env";
 
 /**
@@ -9,7 +8,7 @@ import { supabaseServiceKey, supabaseUrl } from "./env";
  * do safely: creating auth users, resetting passwords, the legacy import.
  */
 export function createServiceClient() {
-  return createClient<Database>(supabaseUrl(), supabaseServiceKey(), {
+  return createClient(supabaseUrl(), supabaseServiceKey(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

@@ -1,14 +1,28 @@
-import { EmptyState } from "@nacc/ui";
+import { PageHeader } from "@nacc/ui";
+import { TH } from "@nacc/types";
+import { createServerSupabase } from "@nacc/db/server";
+import { OfficerRequestForm } from "@/components/officer-request-form";
 
-export default function NewOfficerRequestPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewOfficerRequestPage() {
+  const supabase = await createServerSupabase();
+  const [{ data: departments }, { data: locations }] = await Promise.all([
+    supabase.from("departments").select("id,name_th").eq("is_active", true).order("name_th"),
+    supabase.from("locations").select("id,name_th").eq("is_active", true).order("name_th"),
+  ]);
+
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <EmptyState
-          title="บันทึกหนังสือขอที่จอดรถ"
-          description="ฟอร์มเจ้าหน้าที่จะใช้ schema กลางจาก @nacc/types ใน Loop User Flow"
-        />
-      </div>
-    </main>
+    <>
+      <PageHeader
+        title={TH.action.recordLetter}
+        description="กรอกข้อมูลหนังสือราชการและรายละเอียดวันที่ต้องการใช้ที่จอดรถ"
+      />
+      <OfficerRequestForm
+        mode="create"
+        departments={(departments ?? []) as { id: string; name_th: string }[]}
+        locations={(locations ?? []) as { id: string; name_th: string }[]}
+      />
+    </>
   );
 }

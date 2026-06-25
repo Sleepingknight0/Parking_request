@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ClipboardList, ShieldCheck } from "lucide-react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nacc/ui";
-import { TH } from "@nacc/types";
+import { TH, USER_APP_ROLES } from "@nacc/types";
+import { requireProfile } from "@nacc/auth/guards";
 
 const modes = [
   {
@@ -18,7 +19,13 @@ const modes = [
   },
 ];
 
-export default function SelectRolePage() {
+export default async function SelectRolePage() {
+  await requireProfile({
+    roles: USER_APP_ROLES,
+    loginPath: "/login",
+    noAccessPath: "/login",
+  });
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="mx-auto flex max-w-5xl flex-col gap-8">

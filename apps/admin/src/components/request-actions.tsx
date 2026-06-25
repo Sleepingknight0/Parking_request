@@ -33,6 +33,9 @@ import {
 import { TH, type RequestStatus, type ProfileRef } from "@nacc/types";
 import {
   submitRequest,
+  markUnderReview,
+  approveRequest,
+  rejectRequest,
   assignRequest,
   changeStatus,
   completeRequest,
@@ -52,7 +55,7 @@ export function RequestActions({
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
-  const [dialog, setDialog] = React.useState<null | "assign" | "cancel" | "complete">(null);
+  const [dialog, setDialog] = React.useState<null | "assign" | "cancel" | "complete" | "reject">(null);
   const [assignee, setAssignee] = React.useState("");
   const [reason, setReason] = React.useState("");
   const [note, setNote] = React.useState("");
@@ -74,7 +77,7 @@ export function RequestActions({
     }
   }
 
-  const canEdit = ["draft", "submitted", "assigned"].includes(status);
+  const canEdit = !["completed", "cancelled", "rejected"].includes(status);
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -93,7 +96,26 @@ export function RequestActions({
         </Button>
       )}
 
-      {(status === "submitted" || status === "assigned") && (
+      {status === "submitted" && (
+        <Button className="gap-2" disabled={pending}
+          onClick={() => run(() => markUnderReview(id), "รับเข้าตรวจสอบแล้ว")}>
+          <CheckCircle2 className="h-4 w-4" /> รับเข้าตรวจสอบ
+        </Button>
+      )}
+
+      {status === "under_review" && (
+        <>
+          <Button className="gap-2" disabled={pending}
+            onClick={() => run(() => approveRequest(id), "อนุมัติคำขอแล้ว")}>
+            <CheckCircle2 className="h-4 w-4" /> อนุมัติ
+          </Button>
+          <Button className="gap-2" variant="destructive" disabled={pending} onClick={() => setDialog("reject")}>
+            <XCircle className="h-4 w-4" /> ไม่อนุมัติ
+          </Button>
+        </>
+      )}
+
+      {(status === "approved" || status === "assigned") && (
         <Button className="gap-2" disabled={pending} onClick={() => setDialog("assign")}>
           <UserPlus className="h-4 w-4" />
           {status === "assigned" ? TH.action.reassign : TH.action.assign}
@@ -113,7 +135,7 @@ export function RequestActions({
         </Button>
       )}
 
-      {["submitted", "assigned", "in_progress"].includes(status) && (
+      {["submitted", "under_review", "approved", "assigned", "in_progress"].includes(status) && (
         <Button className="gap-2" variant="destructive" disabled={pending} onClick={() => setDialog("cancel")}>
           <XCircle className="h-4 w-4" /> {TH.action.cancel}
         </Button>
@@ -164,6 +186,27 @@ export function RequestActions({
             <Button variant="outline" onClick={() => setDialog(null)}>{TH.action.close}</Button>
             <Button variant="destructive" disabled={pending || !reason.trim()}
               onClick={() => run(() => cancelRequest(id, reason), "ยกเลิกคำขอแล้ว")}>
+              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : TH.action.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject dialog */}
+      <Dialog open={dialog === "reject"} onOpenChange={(o) => !o && setDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ไม่อนุมัติคำขอ</DialogTitle>
+            <DialogDescription>ระบุเหตุผลหรือหมายเหตุภายในสำหรับการไม่อนุมัติ</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{TH.entity.note}</Label>
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialog(null)}>{TH.action.close}</Button>
+            <Button variant="destructive" disabled={pending}
+              onClick={() => run(() => rejectRequest(id, reason), "ไม่อนุมัติคำขอแล้ว")}>
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : TH.action.confirm}
             </Button>
           </DialogFooter>

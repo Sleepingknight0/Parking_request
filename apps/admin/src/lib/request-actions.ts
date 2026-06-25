@@ -169,7 +169,7 @@ export async function updateRequest(
   return { ok: true, id };
 }
 
-/** Submit a draft (draft → submitted). */
+/** Submit a draft (draft -> submitted). */
 export async function submitRequest(id: string): Promise<ActionResult> {
   const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
   const supabase = await createServerSupabase();
@@ -184,7 +184,56 @@ export async function submitRequest(id: string): Promise<ActionResult> {
   return { ok: true, id };
 }
 
-/** Assign or reassign to security staff (submitted → assigned, or reassign). */
+/** Move a submitted request into review (submitted -> under_review). */
+export async function markUnderReview(id: string): Promise<ActionResult> {
+  const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("parking_requests")
+    .update({ status: "under_review" })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  await logActivity("request.status_change", id, profile.id, { to: "under_review" });
+  revalidatePath(`/requests/${id}`);
+  revalidatePath("/requests");
+  revalidatePath("/dashboard");
+  return { ok: true, id };
+}
+
+export async function approveRequest(id: string): Promise<ActionResult> {
+  const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("parking_requests")
+    .update({ status: "approved", approved_by: profile.id })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  await logActivity("request.status_change", id, profile.id, { to: "approved" });
+  revalidatePath(`/requests/${id}`);
+  revalidatePath("/requests");
+  revalidatePath("/dashboard");
+  return { ok: true, id };
+}
+
+export async function rejectRequest(id: string, reason?: string): Promise<ActionResult> {
+  const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("parking_requests")
+    .update({
+      status: "rejected",
+      rejected_by: profile.id,
+      admin_note: reason?.trim() || null,
+    })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  await logActivity("request.status_change", id, profile.id, { to: "rejected", reason });
+  revalidatePath(`/requests/${id}`);
+  revalidatePath("/requests");
+  revalidatePath("/dashboard");
+  return { ok: true, id };
+}
+
 export async function assignRequest(
   id: string,
   assignedTo: string,
@@ -203,13 +252,13 @@ export async function assignRequest(
     assigned_by: profile.id,
     assigned_at: new Date().toISOString(),
   };
-  if (current?.status === "submitted") patch.status = "assigned";
+  if (current?.status === "approved") patch.status = "assigned";
 
   const { error } = await supabase.from("parking_requests").update(patch).eq("id", id);
   if (error) return { ok: false, error: error.message };
 
   await logActivity(
-    current?.status === "submitted" ? "request.assign" : "request.reassign",
+    current?.status === "approved" ? "request.assign" : "request.reassign",
     id,
     profile.id,
     { assigned_to: assignedTo },
@@ -220,7 +269,7 @@ export async function assignRequest(
   return { ok: true, id };
 }
 
-/** Generic status move for the valid transitions (e.g. assigned → in_progress). */
+/** Generic status move for valid transitions (for example assigned -> in_progress). */
 export async function changeStatus(
   id: string,
   toStatus: "in_progress",
@@ -238,7 +287,7 @@ export async function changeStatus(
   return { ok: true, id };
 }
 
-/** Complete a request — requires at least one completion_photo attachment. */
+/** Complete a request. Requires at least one completion_photo attachment. */
 export async function completeRequest(
   id: string,
   note?: string,
@@ -273,7 +322,7 @@ export async function completeRequest(
   return { ok: true, id };
 }
 
-/** Cancel a request — reason required. */
+/** Cancel a request. Reason is required. */
 export async function cancelRequest(
   id: string,
   reason: string,

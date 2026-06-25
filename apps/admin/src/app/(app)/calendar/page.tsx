@@ -14,7 +14,7 @@ export default async function CalendarPage() {
       "request_date,start_time,end_time,parking_requests!inner(id,request_no,official_letter_no,status,cars_count,department:departments(short_name,name_th))",
     );
 
-  const rows = (data ?? []) as Array<{
+  const rows = (data ?? []) as unknown as Array<{
     request_date: string;
     start_time: string | null;
     end_time: string | null;
@@ -38,7 +38,7 @@ export default async function CalendarPage() {
       return {
         id: `${p.id}-${r.request_date}`,
         requestId: p.id,
-        title: `${p.official_letter_no} • ${dept} • ${p.cars_count} คัน`,
+        title: `${p.official_letter_no} - ${dept} - ${p.cars_count} คัน`,
         start,
         end,
         color: STATUS_HEX[p.status],

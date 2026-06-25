@@ -1,9 +1,10 @@
 -- ============================================================================
 -- Row Level Security — single source of truth (mirrored in supabase/policies.sql).
 --   super_admin/admin : full read+write
---   officer           : read+write OWN requests; edit only draft/submitted & unassigned
---   security_staff    : read submitted/assigned/in_progress/completed/cancelled;
---                       accept submitted jobs + progress jobs assigned to self
+--   officer           : read+write OWN requests; edit draft/submitted & unassigned;
+--                       cancel submitted/under_review/approved before assignment
+--   security_staff    : read approved/assigned/in_progress/completed/cancelled;
+--                       accept approved jobs + progress jobs assigned to self
 --   viewer            : read-only everything
 --   children (dates/plates/attachments/history) inherit request access
 -- ============================================================================
@@ -16,9 +17,11 @@ returns boolean language sql stable security definer set search_path = public as
     where r.id = req and (
       public.is_admin()
       or public.current_role_name() = 'viewer'
-      or (public.is_officer() and r.created_by = auth.uid())
+      or (public.is_officer() and r.created_by = auth.uid()
+          and r.assigned_to is null
+          and r.status in ('draft','submitted'))
       or (public.is_security()
-          and r.status in ('submitted','assigned','in_progress','completed','cancelled'))
+          and r.status in ('approved','assigned','in_progress','completed','cancelled'))
     )
   );
 $$;
@@ -30,7 +33,7 @@ returns boolean language sql stable security definer set search_path = public as
     where r.id = req and (
       public.is_admin()
       or (public.is_officer() and r.created_by = auth.uid())
-      or (public.is_security() and (r.assigned_to = auth.uid() or r.status = 'submitted'))
+      or (public.is_security() and (r.assigned_to = auth.uid() or r.status = 'approved'))
     )
   );
 $$;
@@ -88,7 +91,7 @@ create policy requests_select on public.parking_requests
     or public.current_role_name() = 'viewer'
     or (public.is_officer() and created_by = auth.uid())
     or (public.is_security()
-        and status in ('submitted','assigned','in_progress','completed','cancelled'))
+        and status in ('approved','assigned','in_progress','completed','cancelled'))
   );
 
 drop policy if exists requests_insert on public.parking_requests;
@@ -107,14 +110,14 @@ create policy requests_update_officer on public.parking_requests
   for update to authenticated
   using (
     public.is_officer() and created_by = auth.uid()
-    and status in ('draft','submitted') and assigned_to is null
+    and status in ('draft','submitted','under_review','approved') and assigned_to is null
   )
   with check (public.is_officer() and created_by = auth.uid());
 
 drop policy if exists requests_update_security on public.parking_requests;
 create policy requests_update_security on public.parking_requests
   for update to authenticated
-  using (public.is_security() and (assigned_to = auth.uid() or status = 'submitted'))
+  using (public.is_security() and (assigned_to = auth.uid() or status = 'approved'))
   with check (public.is_security() and assigned_to = auth.uid());
 
 drop policy if exists requests_delete on public.parking_requests;

@@ -14,10 +14,11 @@
 -- ----------------------------------------------------------------------------
 -- super_admin / admin   full read + write on every table
 -- officer               read+write OWN parking_requests (created_by = self);
---                       UPDATE only while status ∈ {draft, submitted} AND
---                       assigned_to IS NULL; may DELETE own drafts
--- security_staff        READ requests in {submitted, assigned, in_progress,
---                       completed, cancelled}; may UPDATE to accept a submitted
+--                       UPDATE only while status in {draft, submitted,
+--                       under_review, approved} AND assigned_to IS NULL;
+--                       may DELETE own drafts
+-- security_staff        READ requests in {approved, assigned, in_progress,
+--                       completed, cancelled}; may UPDATE to accept an approved
 --                       job (assigned_to → self) or progress a job assigned to
 --                       self (in_progress / completed / cancelled)
 -- viewer                read-only on everything; no writes

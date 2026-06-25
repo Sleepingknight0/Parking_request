@@ -21,7 +21,7 @@ export default async function UsersPage() {
     <>
       <PageHeader title={TH.nav.users} description="จัดการบัญชีผู้ใช้งานและบทบาท" />
       <UsersManager
-        users={(users ?? []) as UserRow[]}
+        users={(users ?? []) as unknown as UserRow[]}
         departments={(departments ?? []) as { id: string; name_th: string }[]}
       />
     </>

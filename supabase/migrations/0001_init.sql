@@ -103,7 +103,7 @@ create table if not exists public.parking_requests (
   assigned_to              uuid references public.profiles(id) on delete set null,
   assigned_by              uuid references public.profiles(id) on delete set null,
   assigned_at              timestamptz,
-  -- reserved for future governance mode (unused in v1)
+  -- Approval and rejection audit fields.
   approved_by              uuid references public.profiles(id) on delete set null,
   approved_at              timestamptz,
   rejected_by              uuid references public.profiles(id) on delete set null,
@@ -202,12 +202,13 @@ create index if not exists idx_activity_entity          on public.activity_logs(
 create index if not exists idx_activity_actor           on public.activity_logs(actor_id);
 
 -- ───────────────────────── status transition validation ─────────────────────────
--- Active v1 machine (no approval gate). Reserved statuses are unreachable in v1.
 create or replace function public.is_valid_status_transition(p_from text, p_to text)
 returns boolean language sql immutable as $$
   select case p_from
     when 'draft'       then p_to in ('submitted')
-    when 'submitted'   then p_to in ('assigned','cancelled')
+    when 'submitted'   then p_to in ('under_review','cancelled')
+    when 'under_review' then p_to in ('approved','rejected','cancelled')
+    when 'approved'    then p_to in ('assigned','cancelled')
     when 'assigned'    then p_to in ('in_progress','cancelled')
     when 'in_progress' then p_to in ('completed','cancelled')
     else false
@@ -223,6 +224,8 @@ begin
       raise exception 'ไม่อนุญาตให้เปลี่ยนสถานะจาก % เป็น %', old.status, new.status
         using errcode = 'check_violation';
     end if;
+    if new.status = 'approved'    and new.approved_at  is null then new.approved_at  := now(); end if;
+    if new.status = 'rejected'    and new.rejected_at  is null then new.rejected_at  := now(); end if;
     if new.status = 'assigned'    and new.assigned_at  is null then new.assigned_at  := now(); end if;
     if new.status = 'in_progress' then /* started; no dedicated column */ null; end if;
     if new.status = 'completed'   and new.completed_at is null then new.completed_at := now(); end if;

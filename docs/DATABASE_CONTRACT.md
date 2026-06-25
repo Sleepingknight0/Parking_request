@@ -147,9 +147,9 @@ Internal request number counter used by `next_request_no()`.
 
 Users must not edit `request_no`.
 
-## Current V1 Status Contract
+## Status Contract
 
-The database check constraint includes all required statuses:
+The database check constraint and active workflow include all required statuses:
 
 - `draft`
 - `submitted`
@@ -161,30 +161,27 @@ The database check constraint includes all required statuses:
 - `cancelled`
 - `rejected`
 
-The active transition trigger currently allows only the v1 no-approval workflow:
+The active transition trigger allows:
 
 - `draft -> submitted`
-- `submitted -> assigned`
+- `submitted -> under_review`
 - `submitted -> cancelled`
+- `under_review -> approved`
+- `under_review -> rejected`
+- `under_review -> cancelled`
+- `approved -> assigned`
+- `approved -> cancelled`
 - `assigned -> in_progress`
 - `assigned -> cancelled`
 - `in_progress -> completed`
 - `in_progress -> cancelled`
 
-Reserved statuses:
-
-- `under_review`
-- `approved`
-- `rejected`
-
-These are present in schema/types for compatibility with the full brief, but are not reachable until the approval workflow is explicitly activated.
-
 ## RLS Summary
 
 - `super_admin` and `admin`: full read/write.
 - `viewer`: read-only.
-- `officer`: read/write own requests; update only draft/submitted unassigned requests.
-- `security_staff`: read submitted/assigned/in_progress/completed/cancelled requests; update submitted or assigned-to-self jobs.
+- `officer`: read/write own requests; update draft/submitted/under_review/approved requests while unassigned.
+- `security_staff`: read approved/assigned/in_progress/completed/cancelled requests; accept approved jobs or update jobs assigned to self.
 - Child tables inherit request access through helper functions.
 
 ## Storage

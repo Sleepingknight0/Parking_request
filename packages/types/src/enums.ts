@@ -46,39 +46,34 @@ export function isUserRole(role: Role): boolean {
 
 /* ───────────────────────── Statuses ───────────────────────── */
 
-/**
- * Full enum kept in the DB CHECK constraint. The v1 UI uses only the ACTIVE
- * subset (no approval gate). under_review/approved/rejected are RESERVED for a
- * future governance mode and have no UI in v1.
- */
+/** Full status enum used by the DB CHECK constraint, UI, and RLS policies. */
 export const REQUEST_STATUSES = [
   "draft",
   "submitted",
-  "under_review", // reserved
-  "approved", // reserved
+  "under_review",
+  "approved",
   "assigned",
   "in_progress",
   "completed",
   "cancelled",
-  "rejected", // reserved
+  "rejected",
 ] as const;
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 
 export const ACTIVE_STATUSES = [
   "draft",
   "submitted",
+  "under_review",
+  "approved",
   "assigned",
   "in_progress",
   "completed",
   "cancelled",
+  "rejected",
 ] as const satisfies readonly RequestStatus[];
 export type ActiveStatus = (typeof ACTIVE_STATUSES)[number];
 
-export const RESERVED_STATUSES = [
-  "under_review",
-  "approved",
-  "rejected",
-] as const satisfies readonly RequestStatus[];
+export const RESERVED_STATUSES = [] as const satisfies readonly RequestStatus[];
 
 export const STATUS_LABELS_TH: Record<RequestStatus, string> = {
   draft: "แบบร่าง",
@@ -119,21 +114,18 @@ export const STATUS_HEX: Record<RequestStatus, string> = {
 };
 
 /**
- * Allowed transitions in the v1 (no-approval) state machine.
+ * Allowed transitions in the active approval workflow.
  * Mirrors the validate_status_transition() trigger in the DB.
- *   draft → submitted → assigned → in_progress → completed
- *   cancelled reachable from submitted/assigned/in_progress
  */
 export const STATUS_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   draft: ["submitted"],
-  submitted: ["assigned", "cancelled"],
+  submitted: ["under_review", "cancelled"],
+  under_review: ["approved", "rejected", "cancelled"],
+  approved: ["assigned", "cancelled"],
   assigned: ["in_progress", "cancelled"],
   in_progress: ["completed", "cancelled"],
   completed: [],
   cancelled: [],
-  // reserved / unused in v1
-  under_review: [],
-  approved: [],
   rejected: [],
 };
 
@@ -146,7 +138,13 @@ export function nextStatuses(from: RequestStatus): RequestStatus[] {
 }
 
 /** Statuses a request can hold and still be considered "open work". */
-export const OPEN_STATUSES: RequestStatus[] = ["submitted", "assigned", "in_progress"];
+export const OPEN_STATUSES: RequestStatus[] = [
+  "submitted",
+  "under_review",
+  "approved",
+  "assigned",
+  "in_progress",
+];
 
 /* ───────────────────────── Priority ───────────────────────── */
 

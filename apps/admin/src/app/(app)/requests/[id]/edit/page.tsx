@@ -27,7 +27,7 @@ export default async function EditRequestPage({
   return (
     <>
       <PageHeader
-        title={`${TH.action.edit} • ${request.request_no}`}
+        title={`${TH.action.edit} - ${request.request_no}`}
         actions={
           <Button asChild variant="outline">
             <Link href={`/requests/${id}`}>{TH.action.back}</Link>

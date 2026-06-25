@@ -191,7 +191,7 @@ export default async function RequestDetailPage({
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {formatThaiDateTime(h.created_at)}
-                          {changedBy ? ` • ${changedBy}` : ""}
+                          {changedBy ? ` - ${changedBy}` : ""}
                         </div>
                         {h.note ? <div className="mt-0.5 text-xs">{h.note}</div> : null}
                       </div>

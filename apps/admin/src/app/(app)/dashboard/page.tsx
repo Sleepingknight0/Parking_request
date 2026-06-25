@@ -68,7 +68,7 @@ export default async function DashboardPage() {
     listRequests(supabase, { limit: 8 }),
   ]);
 
-  const all = (allRaw ?? []) as Array<{
+  const all = (allRaw ?? []) as unknown as Array<{
     status: RequestStatus;
     cars_count: number;
     received_date: string | null;
@@ -87,10 +87,10 @@ export default async function DashboardPage() {
 
   const lettersToday = all.filter((r) => r.received_date === today).length;
   const unassigned = all.filter(
-    (r) => r.status === "submitted" && !r.assigned_to,
+    (r) => r.status === "approved" && !r.assigned_to,
   ).length;
 
-  const dateRows = (dateRaw ?? []) as Array<{
+  const dateRows = (dateRaw ?? []) as unknown as Array<{
     request_date: string;
     parking_requests: { cars_count: number; status: RequestStatus } | null;
   }>;
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={TH.dashboard.totalRequests} value={all.length} icon={<FileText className="h-5 w-5" />} />
-        <StatCard label={TH.dashboard.pending} value={count("submitted")} icon={<Clock className="h-5 w-5" />} accentClassName="text-blue-600" />
+        <StatCard label={TH.dashboard.pending} value={count("under_review")} icon={<Clock className="h-5 w-5" />} accentClassName="text-amber-600" />
         <StatCard label={TH.dashboard.inProgress} value={count("in_progress")} icon={<Loader2 className="h-5 w-5" />} accentClassName="text-orange-600" />
         <StatCard label={TH.dashboard.completed} value={count("completed")} icon={<CheckCircle2 className="h-5 w-5" />} accentClassName="text-emerald-600" />
         <StatCard label={TH.dashboard.cancelled} value={count("cancelled")} icon={<XCircle className="h-5 w-5" />} accentClassName="text-slate-500" />

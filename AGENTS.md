@@ -61,15 +61,13 @@ Both apps share the same Supabase project, PostgreSQL database, Supabase Auth, S
 
 ## Current Contract Freeze
 
-Loop A freezes the current v1 contract as documented in `docs/DATABASE_CONTRACT.md`, `docs/API_CONTRACT.md`, and `docs/STATUS_WORKFLOW.md`.
+Loop A freezes the current contract as documented in `docs/DATABASE_CONTRACT.md`, `docs/API_CONTRACT.md`, and `docs/STATUS_WORKFLOW.md`.
 
-The database enum includes the full requested statuses. The active v1 workflow currently uses:
+The active workflow uses:
 
-`draft -> submitted -> assigned -> in_progress -> completed`
+`draft -> submitted -> under_review -> approved/rejected -> assigned -> in_progress -> completed`
 
-Cancellation is allowed from `submitted`, `assigned`, and `in_progress`.
-
-The requested approval gate statuses `under_review`, `approved`, and `rejected` are reserved in the schema but not active in the v1 transition trigger. Activate them only through a documented Contract Change Request.
+Cancellation is allowed from `submitted`, `under_review`, `approved`, `assigned`, and `in_progress`.
 
 ## Ownership
 

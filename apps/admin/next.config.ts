@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: path.resolve("../.."),
   transpilePackages: [
     "@nacc/ui",
     "@nacc/types",

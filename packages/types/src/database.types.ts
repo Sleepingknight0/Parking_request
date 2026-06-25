@@ -312,13 +312,13 @@ export interface Database {
       sheet_sync_logs: { Row: SheetSyncLogsRow; Insert: SheetSyncLogsInsert; Update: Partial<SheetSyncLogsInsert>; Relationships: [] };
       request_counters: { Row: RequestCountersRow; Insert: RequestCountersInsert; Update: Partial<RequestCountersInsert>; Relationships: [] };
     };
-    Views: Record<string, never>;
+    Views: {};
     Functions: {
       next_request_no: { Args: Record<string, never>; Returns: string };
       current_role_name: { Args: Record<string, never>; Returns: string };
     };
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
+    Enums: {};
+    CompositeTypes: {};
   };
 }
 

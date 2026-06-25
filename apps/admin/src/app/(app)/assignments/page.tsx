@@ -28,7 +28,7 @@ export default async function AssignmentsPage() {
   const { rows } = await listRequests(supabase, { limit: 500 });
   const list = rows as ParkingRequestListItem[];
 
-  const unassigned = list.filter((r) => r.status === "submitted" && !r.assigned_to);
+  const unassigned = list.filter((r) => r.status === "approved" && !r.assigned_to);
   const active = list.filter((r) => r.status === "assigned" || r.status === "in_progress");
 
   return (
