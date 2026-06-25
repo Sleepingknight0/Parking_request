@@ -1,5 +1,42 @@
 # Claude Progress
 
+## 2026-06-25 — 🔴 FIX: กู้ admin middleware (session หลุดทุกการนำทาง)
+
+**อาการ:** ล็อกอินเข้า /dashboard ได้ แต่คลิกไปหน้าอื่นแล้วเด้งออก login ทุกครั้ง ("พังเละทุกอย่าง").
+
+**ต้นเหตุ:** commit `45fdab0` ("Removed middleware files") ลบ `apps/admin/src/middleware.ts` + `apps/user/src/middleware.ts` ทิ้ง → ไม่มีตัว refresh/persist Supabase session ต่อ request → session ไม่ถูกเขียนกลับ → หลุดหลังหน้าแรก.
+
+**แก้:** สร้าง `apps/admin/src/middleware.ts` กลับมา (เรียก `updateSession` จาก `@nacc/db/middleware`).
+- ⚠️ **อย่าลบไฟล์นี้อีก** — Supabase SSR จำเป็นต้องมี middleware.
+- ปรับจากเดิม: เพิ่ม `/no-access` เป็น public + ตัด `/api/*` ออกจาก matcher (กัน demo-enter/sync ถูก redirect).
+- **ไม่** กู้ user middleware (user app เปลี่ยนเป็น no-login cookie mode แล้ว).
+
+**ยืนยัน:** click-nav / curl reload (ส่ง cookie) / idle — session เสถียรครบทุกหน้า. (อาการ reload หลุดที่เห็นตอนเทสต์เป็น artifact ของ playwright `open` = เปิด context ใหม่ไม่พก cookie ไม่ใช่บั๊กจริง.) typecheck + lint ผ่าน.
+
+## 2026-06-25 — Admin: รายงาน + เอกสารราชการ + Audit + นำเข้าข้อมูล (Claude)
+
+### Done
+
+- **เอกสารราชการ/PDF** — route group `(print)` (auth, no shell) + print CSS ใน `globals.css`
+  - `/reports/print` — รายงานสรุปทั้งระบบ (ต่อยอดร่วมกับ Cursor)
+  - `/requests/[id]/print` — ใบคำขอรายฉบับ (ไฟล์ใหม่ของ Claude)
+  - `report-document-actions.tsx` — ปุ่มพิมพ์/บันทึก PDF
+- **Audit log** — `/activity` + `audit-log-view.tsx`, `audit-filters.tsx`, `lib/activity-labels.ts` (กรองตามผู้ทำ/การกระทำ/วันที่ + ส่งออก CSV)
+- **นำเข้าข้อมูลเก่า (UI)** — `/import` + `legacy-importer.tsx` + `lib/import-actions.ts` (server action, dry-run/apply, reuse `normalizeLegacyRow`)
+- เพิ่ม nav `/activity` + `/import` (admin only) ใน `app-shell.tsx`
+
+### เส้นแบ่งโซนกับ Cursor (กันแก้ทับ)
+
+- **Claude ถือ:** `(print)/**`, `report-*`, `lib/report-summary.ts`, `audit-*`, `lib/activity-labels.ts`, `legacy-importer.tsx`, `lib/import-actions.ts`, `/activity`, `/import`
+- **Cursor ถือ:** `app-shell` (Claude แตะแค่เพิ่ม nav), dashboard, requests list (`admin-requests-panel`), calendar, settings
+- ⚠️ `/reports` + `charts.tsx` + `report-summary.ts` เป็นพื้นที่ร่วม — แก้แล้วบอกกันก่อน
+
+### Verification
+
+- `pnpm typecheck` (admin) passed
+- `pnpm lint` (admin) passed
+- `pnpm build` (admin) passed — route ใหม่ `/activity`, `/import`, `/requests/[id]/print` ไม่มี collision
+
 ## Loop A: Monorepo + Core Contract
 
 Status: frozen
@@ -158,3 +195,8 @@ Remaining to be usable end-to-end:
   (creates admin/admin + demo accounts + sample requests).
 - Optional: drop a Sheet CSV at `private-data/legacy.csv` and run
   `pnpm import:legacy --dry-run` then `--apply`.
+
+## 2026-06-25 — Cursor: สื่อสารหน้าหลักรวมรายการแบบแท็บ
+
+- `/comms/dashboard` ใช้ `CommsRequestsList` พร้อมแท็บ **ต้องจัดการ** เป็นค่าเริ่มต้น
+- แท็บกรองสถานะ + ค้นหา + การ์ดมือถือเหมือนหน้า `/comms/requests`

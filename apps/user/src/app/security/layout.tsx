@@ -7,11 +7,11 @@ export default async function SecurityLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireAppMode("security");
+  const { displayName } = await requireAppMode("security");
 
   return (
     <UserShell
-      profile={{ display_name: profile.display_name }}
+      profile={{ display_name: displayName }}
       mode="security"
       switchRole={switchRole}
     >

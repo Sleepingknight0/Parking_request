@@ -16,28 +16,26 @@ import {
   toast,
 } from "@nacc/ui";
 import { TH, type RequestStatus } from "@nacc/types";
-import {
-  acceptJob,
-  cancelJob,
-  completeJob,
-  startJob,
-  type ActionResult,
-} from "@/lib/request-actions";
+import { cancelJob, completeJob, startJob, type ActionResult } from "@/lib/request-actions";
+import type { SecurityJobRow } from "@/lib/security-job-utils";
+import { SecuritySignMethodDialog } from "./security-sign-method-dialog";
 
 export function SecurityJobActions({
-  id,
-  status,
+  job,
+  todayIso,
   assignedToMe,
 }: {
-  id: string;
-  status: RequestStatus;
+  job: SecurityJobRow;
+  todayIso: string;
   assignedToMe: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [dialog, setDialog] = React.useState<null | "complete" | "cancel">(null);
+  const [signDialogOpen, setSignDialogOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [reason, setReason] = React.useState("");
+  const { id, status } = job;
 
   async function run(fn: () => Promise<ActionResult>, message: string) {
     setPending(true);
@@ -58,11 +56,7 @@ export function SecurityJobActions({
   return (
     <div className="flex flex-wrap gap-2">
       {status === "approved" ? (
-        <Button
-          className="gap-2"
-          disabled={pending}
-          onClick={() => run(() => acceptJob(id), TH.security.acknowledged)}
-        >
+        <Button className="gap-2" onClick={() => setSignDialogOpen(true)}>
           <ShieldCheck className="h-4 w-4" />
           {TH.security.acknowledge}
         </Button>
@@ -139,6 +133,14 @@ export function SecurityJobActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SecuritySignMethodDialog
+        job={job}
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        andStart={false}
+        todayIso={todayIso}
+      />
     </div>
   );
 }

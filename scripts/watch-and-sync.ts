@@ -20,7 +20,7 @@ config({ path: path.resolve(process.cwd(), "apps/admin/.env.local"), override: f
 import { createClient } from "@supabase/supabase-js";
 import { google } from "googleapis";
 import { STATUS_LABELS_TH } from "@nacc/types";
-import { formatTimeTh } from "@nacc/utils";
+import { formatTimeThDot } from "@nacc/utils";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SRK = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -66,8 +66,8 @@ async function syncRequest(
 
   const dates   = ((r as any).request_dates ?? []) as any[];
   const first   = dates[0] ?? null;
-  const startTh = formatTimeTh(first?.start_time);
-  const endTh   = formatTimeTh(first?.end_time);
+  const startTh = formatTimeThDot(first?.start_time);
+  const endTh   = formatTimeThDot(first?.end_time);
   const time    = startTh && endTh ? `${startTh}-${endTh}` : startTh || endTh || "";
   const loc     = (r as any).requested_location?.name_th ?? (r as any).requested_location_text ?? "";
   const officer = (r as any).legacy_officer_name ?? (r as any).created_by_profile?.display_name ?? "";

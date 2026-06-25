@@ -89,6 +89,18 @@ Important fields:
 - `assigned_at`
 - `approved_by`
 - `approved_at`
+- `comms_verified_by`
+- `comms_verified_at`
+- `metadata` — optional JSON; known keys:
+  - `sign_output_method` — `print` | `handwrite` (how รปภ. chose to make cone signs)
+  - `sign_output_method_at` — ISO timestamp when method was recorded
+
+### comms_operational_settings
+
+Singleton row (`id = true`) for shared comms special modes in the user app:
+
+- `auto_approve_incoming` — auto-approve submitted/under_review requests (requires official letter file)
+- `auto_verify_security_work` — auto-verify completed security jobs
 - `rejected_by`
 - `rejected_at`
 - `cancelled_by`
@@ -190,7 +202,7 @@ The active transition trigger allows:
 
 - `super_admin` and `admin`: full read/write.
 - `viewer`: read-only.
-- `officer`: read/write own requests; update draft/submitted/under_review/approved requests while unassigned.
+- `officer`: read all requests; update/delete unassigned requests in draft/submitted/under_review/approved (shared pool, not per-user).
 - `security_staff`: read approved/assigned/in_progress/completed/cancelled requests; accept approved jobs or update jobs assigned to self.
 - Child tables inherit request access through helper functions.
 

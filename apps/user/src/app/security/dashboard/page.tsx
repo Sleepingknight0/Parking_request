@@ -1,52 +1,45 @@
-import { PageHeader } from "@nacc/ui";
-import { TH, type RequestStatus } from "@nacc/types";
-import { createServerSupabase } from "@nacc/db/server";
+import Link from "next/link";
+import { Button, PageHeader } from "@nacc/ui";
+import { TH } from "@nacc/types";
+import { getUserAppDb } from "@/lib/user-db";
 import { REQUEST_LIST_SELECT } from "@nacc/db/queries";
-import { formatTimeRange } from "@nacc/utils";
 import { requireAppMode } from "@/lib/user-guards";
-import { type CalendarEvent } from "@/components/request-calendar";
+import { fetchUrgentDashboardCalendarEvents } from "@/lib/security-calendar-data";
 import { SecurityParkingCalendar } from "@/components/security-parking-calendar";
 import { SecurityQuickJobCard } from "@/components/security-quick-job-card";
 import { SecurityLegend } from "@/components/security-legend";
 import {
   comparePrepPriority,
   getNextParkingDate,
-  getSecurityEventColor,
   isActionableSecurityJob,
   needsParkingPrep,
   type SecurityJobRow,
 } from "@/lib/security-job-utils";
+import { DASHBOARD_URGENT_CALENDAR_DAYS } from "@/lib/parking-calendar-constants";
+import { todayIsoLocal } from "@/lib/date-iso";
+import { CalendarDays } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 const JOB_LIST_SELECT = `${REQUEST_LIST_SELECT}, request_license_plates(plate_no,vehicle_note)`;
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayIsoLocal();
 }
 
 export default async function SecurityDashboardPage() {
   const { profile } = await requireAppMode("security");
-  const supabase = await createServerSupabase();
+  const supabase = getUserAppDb();
   const today = todayIso();
 
-  const [{ data: jobsData }, { data: calendarRows }, { data: photoRows }] = await Promise.all([
+  const [{ data: jobsData }, urgentCalendarEvents, { data: photoRows }] = await Promise.all([
     supabase
       .from("parking_requests")
       .select(JOB_LIST_SELECT)
       .in("status", ["approved", "assigned", "in_progress", "completed"])
       .order("created_at", { ascending: false })
       .limit(100),
-    supabase
-      .from("request_dates")
-      .select(
-        `request_date,start_time,end_time,
-        parking_requests!inner(
-          id,request_no,official_letter_no,status,cars_count,requested_location_text,
-          department:departments(short_name,name_th),
-          requested_location:locations(name_th)
-        )`,
-      ),
+    fetchUrgentDashboardCalendarEvents(supabase, today),
     supabase
       .from("request_attachments")
       .select("request_id")
@@ -68,42 +61,6 @@ export default async function SecurityDashboardPage() {
     const id = row.request_id as string;
     photoCountByRequest.set(id, (photoCountByRequest.get(id) ?? 0) + 1);
   }
-
-  const calendarEvents: CalendarEvent[] = (
-    (calendarRows ?? []) as unknown as Array<{
-      request_date: string;
-      start_time: string | null;
-      end_time: string | null;
-      parking_requests: {
-        id: string;
-        official_letter_no: string;
-        status: RequestStatus;
-        cars_count: number;
-        requested_location_text: string | null;
-        department: { short_name: string | null; name_th: string } | null;
-        requested_location: { name_th: string } | null;
-      } | null;
-    }>
-  )
-    .filter((r) => r.parking_requests && r.parking_requests.status !== "draft")
-    .map((r) => {
-      const p = r.parking_requests!;
-      const location =
-        p.requested_location?.name_th ?? p.requested_location_text ?? "ยังไม่ระบุสถานที่";
-      const start = r.start_time ? `${r.request_date}T${r.start_time}` : r.request_date;
-      const end = r.end_time ? `${r.request_date}T${r.end_time}` : undefined;
-      const timeLabel = formatTimeRange(r.start_time, r.end_time) || undefined;
-      return {
-        id: `${p.id}-${r.request_date}`,
-        requestId: p.id,
-        title: `${location} · ${p.cars_count} คัน`,
-        subtitle: timeLabel,
-        timeLabel,
-        start,
-        end,
-        color: getSecurityEventColor(p.status, r.request_date, today),
-      };
-    });
 
   const actionable = [...newJobs, ...activeJobs].filter((j) => isActionableSecurityJob(j.status));
 
@@ -128,8 +85,27 @@ export default async function SecurityDashboardPage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">ปฏิทินวันขอใช้ที่จอดรถ</h2>
-        <SecurityParkingCalendar events={calendarEvents} todayIso={today} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              ปฏิทินด่วน (วันนี้–{DASHBOARD_URGENT_CALENDAR_DAYS} วันข้างหน้า)
+            </h2>
+            <p className="text-sm text-muted-foreground">เฉพาะวันที่ใกล้ถึงเวลาจัดที่จอด</p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="gap-2 shrink-0">
+            <Link href="/security/calendar">
+              <CalendarDays className="h-4 w-4" />
+              ปฏิทินเต็ม
+            </Link>
+          </Button>
+        </div>
+        <SecurityParkingCalendar
+          events={urgentCalendarEvents}
+          todayIso={today}
+          maxMobileDays={DASHBOARD_URGENT_CALENDAR_DAYS}
+          showDesktop={false}
+          emptyMessage={`ไม่มีงานจอดในช่วง ${DASHBOARD_URGENT_CALENDAR_DAYS} วันข้างหน้า`}
+        />
       </section>
 
       <section className="mt-8 space-y-4">

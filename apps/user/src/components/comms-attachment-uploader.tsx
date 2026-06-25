@@ -11,10 +11,12 @@ export function CommsAttachmentUploader({
   requestId,
   fileType,
   label,
+  onUploaded,
 }: {
   requestId: string;
   fileType: FileType;
   label: string;
+  onUploaded?: () => void;
 }) {
   const router = useRouter();
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -33,6 +35,7 @@ export function CommsAttachmentUploader({
         return;
       }
       toast.success("อัปโหลดไฟล์แล้ว");
+      onUploaded?.();
       router.refresh();
     } finally {
       setPending(false);

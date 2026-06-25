@@ -24,6 +24,8 @@ export default function RootLayout({
   return (
     <html lang="th" className={fontSans.variable}>
       <body className="font-sans antialiased">
+        {/* FullCalendar v6 injects CSS into this anchor — required for Next.js */}
+        <style data-fullcalendar="" />
         {children}
         <Toaster />
       </body>

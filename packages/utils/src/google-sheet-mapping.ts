@@ -80,12 +80,7 @@ export interface LiveSheetRequest {
   status_label_th: string;
 }
 
-/** Formats a time string (HH:MM:SS) → "HH.MM" Thai style. */
-export function formatTimeTh(t: string | null | undefined): string {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  return `${h}.${m}`;
-}
+// Sheet time cells use dot style without "น." — import formatTimeThDot from "./date".
 
 /** Converts Thai numerals (๐-๙) to Arabic digits. */
 export function thaiNumeralsToArabic(s: string): string {

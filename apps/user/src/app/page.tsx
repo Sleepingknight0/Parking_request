@@ -2,9 +2,8 @@ import { TH } from "@nacc/types";
 import { RolePicker } from "@/components/role-picker";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  login: "ไม่สามารถเข้าใช้งานได้ กรุณาลองใหม่อีกครั้ง",
-  inactive: "บัญชีนี้ถูกปิดการใช้งาน",
-  role: "บทบาทไม่ตรงกับระบบ กรุณาเลือกใหม่",
+  admin: "ยังไม่ได้ตั้งค่าแอปผู้ดูแล (NEXT_PUBLIC_ADMIN_APP_URL)",
+  setup: "ยังไม่ได้ตั้งค่าบัญชีเดโมในระบบ กรุณารัน seed",
 };
 
 export default async function HomePage({
@@ -16,15 +15,15 @@ export default async function HomePage({
   const error = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
-        <header className="space-y-2 text-center md:text-left">
-          <p className="text-sm font-medium text-blue-700">{TH.app.userName}</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:py-8">
+      <div className="mx-auto flex max-w-md flex-col gap-5 sm:max-w-lg">
+        <header className="space-y-1.5 text-center">
+          <p className="text-xs font-medium text-blue-700 sm:text-sm">{TH.app.userName}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
             เลือกบทบาทการใช้งาน
           </h1>
-          <p className="mx-auto max-w-2xl text-slate-600 md:mx-0">
-            เลือกหน้าการทำงานให้ตรงกับหน้าที่ของคุณ ระบบใช้ฐานข้อมูลเดียวกับฝั่งผู้ดูแล
+          <p className="text-sm text-slate-600">
+            เลือกหน้าที่ตรงกับงานของคุณ ไม่ต้องล็อกอิน — ใช้ร่วมกันได้ทุกคน
           </p>
         </header>
 

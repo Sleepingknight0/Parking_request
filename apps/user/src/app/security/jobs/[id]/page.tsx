@@ -17,7 +17,7 @@ import {
   type Attachment,
   type FileType,
 } from "@nacc/types";
-import { createServerSupabase } from "@nacc/db/server";
+import { getUserAppDb } from "@/lib/user-db";
 import { getRequestById } from "@nacc/db/queries";
 import {
   formatBytes,
@@ -28,10 +28,14 @@ import {
 } from "@nacc/utils";
 import { SecurityJobActions } from "@/components/security-job-actions";
 import { SecurityStatusBadge } from "@/components/security-status-badge";
+import { SecuritySignMethodBadge } from "@/components/security-sign-method-badge";
+import { SecuritySignExamplesPanel } from "@/components/security-sign-examples-panel";
 import { CompletionPhotoUploader } from "@/components/completion-photo-uploader";
 import { UserAttachmentUploader } from "@/components/user-attachment-uploader";
 import { requireAppMode } from "@/lib/user-guards";
 import { getSignedUrls } from "@/lib/storage";
+import { todayIsoLocal } from "@/lib/date-iso";
+import type { SecurityJobRow } from "@/lib/security-job-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +46,7 @@ export default async function SecurityJobDetailPage({
 }) {
   const { profile } = await requireAppMode("security");
   const { id } = await params;
-  const supabase = await createServerSupabase();
+  const supabase = getUserAppDb();
   const request = await getRequestById(supabase, id);
   if (!request) notFound();
 
@@ -51,6 +55,8 @@ export default async function SecurityJobDetailPage({
   const completionPhotos = attachments.filter((a) => a.file_type === "completion_photo");
   const grouped = (type: FileType) => attachments.filter((a) => a.file_type === type);
   const assignedToMe = request.assigned_to === profile.id;
+  const today = todayIsoLocal();
+  const jobRow = request as unknown as SecurityJobRow;
   const uploaderById: Record<string, string> = {};
   if (request.assigned_to_profile?.id) {
     uploaderById[request.assigned_to_profile.id] = request.assigned_to_profile.display_name;
@@ -70,7 +76,8 @@ export default async function SecurityJobDetailPage({
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <SecurityStatusBadge status={request.status} />
-        <SecurityJobActions id={id} status={request.status} assignedToMe={assignedToMe} />
+        <SecuritySignMethodBadge job={jobRow} />
+        <SecurityJobActions job={jobRow} todayIso={today} assignedToMe={assignedToMe} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -175,6 +182,8 @@ export default async function SecurityJobDetailPage({
         </div>
 
         <div className="space-y-6">
+          <SecuritySignExamplesPanel job={jobRow} todayIso={today} />
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">ข้อมูลงาน</CardTitle>

@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatThaiDate } from "@nacc/utils";
+import { addDaysIso } from "@/lib/date-iso";
 import type { CalendarEvent } from "./request-calendar";
 
 interface DayGroup {
@@ -22,28 +23,36 @@ function groupByDate(events: CalendarEvent[]): DayGroup[] {
     .map(([date, dayEvents]) => ({ date, events: dayEvents }));
 }
 
-export function SecurityMobileCalendar({
+export function ParkingMobileCalendar({
   events,
   todayIso,
   onSelectRequest,
+  maxDays = 14,
+  emptyMessage,
+  hideOnDesktop = true,
 }: {
   events: CalendarEvent[];
   todayIso: string;
   onSelectRequest?: (requestId: string) => void;
+  maxDays?: number;
+  emptyMessage?: string;
+  /** When false, list is shown on desktop too (e.g. dashboard urgent snippet). */
+  hideOnDesktop?: boolean;
 }) {
   const groups = React.useMemo(() => groupByDate(events), [events]);
-  const upcoming = groups.filter((g) => g.date >= todayIso).slice(0, 14);
+  const endIso = React.useMemo(() => addDaysIso(todayIso, maxDays), [todayIso, maxDays]);
+  const upcoming = groups.filter((g) => g.date >= todayIso && g.date <= endIso);
 
   if (!upcoming.length) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-        ยังไม่มีงานจอดรถในช่วง 2 สัปดาห์ข้างหน้า
+        {emptyMessage ?? "ยังไม่มีงานจอดรถในช่วงที่เลือก"}
       </p>
     );
   }
 
   return (
-    <div className="space-y-4 md:hidden">
+    <div className={hideOnDesktop ? "space-y-4 md:hidden" : "space-y-4"}>
       {upcoming.map((group) => (
         <div key={group.date} className="rounded-xl border border-border bg-card">
           <div className="border-b border-border bg-muted/30 px-3 py-2">
@@ -83,11 +92,4 @@ export function SecurityMobileCalendar({
       ))}
     </div>
   );
-}
-
-export function formatCalendarTimeLabel(start: string, end?: string): string | undefined {
-  const timeStart = start.length > 10 ? start.slice(11, 16) : null;
-  const timeEnd = end && end.length > 10 ? end.slice(11, 16) : null;
-  if (!timeStart) return undefined;
-  return formatTimeRange(timeStart, timeEnd);
 }

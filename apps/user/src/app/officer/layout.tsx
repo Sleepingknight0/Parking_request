@@ -7,11 +7,11 @@ export default async function OfficerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireAppMode("officer");
+  const { displayName } = await requireAppMode("officer");
 
   return (
     <UserShell
-      profile={{ display_name: profile.display_name }}
+      profile={{ display_name: displayName }}
       mode="officer"
       switchRole={switchRole}
     >

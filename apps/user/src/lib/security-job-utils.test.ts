@@ -93,7 +93,7 @@ describe("security-job-utils", () => {
 
   it("formats next slot date and time for prep card", () => {
     const line = formatNextSlotLine(job({ id: "1" }), TODAY);
-    assert.match(line ?? "", /09:00/);
+    assert.match(line ?? "", /09\.00/);
     assert.match(line ?? "", /26/);
   });
 
@@ -103,7 +103,7 @@ describe("security-job-utils", () => {
       start_time: null,
       end_time: null,
     });
-    assert.doesNotMatch(line, /09:00/);
+    assert.doesNotMatch(line, /09\.00/);
   });
 
   it("prep urgency: tomorrow is critical", () => {

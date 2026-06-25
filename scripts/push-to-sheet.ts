@@ -21,7 +21,7 @@ config({ path: path.resolve(process.cwd(), "apps/admin/.env.local"), override: f
 import { createClient } from "@supabase/supabase-js";
 import { google } from "googleapis";
 import { STATUS_LABELS_TH } from "@nacc/types";
-import { LIVE_SHEET_HEADERS, formatTimeTh } from "@nacc/utils";
+import { LIVE_SHEET_HEADERS, formatTimeThDot } from "@nacc/utils";
 
 // ─── Env ──────────────────────────────────────────────────────────────────────
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -212,8 +212,8 @@ async function main() {
   const rows: (string | number | null)[][] = requests.map((r: any) => {
     const dates   = (r.request_dates ?? []) as any[];
     const first   = dates[0] ?? null;
-    const startTh = formatTimeTh(first?.start_time);
-    const endTh   = formatTimeTh(first?.end_time);
+    const startTh = formatTimeThDot(first?.start_time);
+    const endTh   = formatTimeThDot(first?.end_time);
     const time    = startTh && endTh ? `${startTh}-${endTh}` : startTh || endTh || "";
     const loc     = r.requested_location?.name_th ?? r.requested_location_text ?? "";
     const officer = r.legacy_officer_name ?? r.created_by_profile?.display_name ?? "";

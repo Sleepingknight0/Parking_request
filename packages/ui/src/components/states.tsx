@@ -38,22 +38,51 @@ export function StatCard({
   icon,
   hint,
   accentClassName,
+  compact = false,
 }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   hint?: string;
   accentClassName?: string;
+  compact?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
+    <div
+      className={cn(
+        "rounded-xl border border-border bg-card shadow-sm",
+        compact ? "p-2.5" : "p-5",
+      )}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <span
+          className={cn(
+            "leading-tight text-muted-foreground",
+            compact ? "text-[10px] sm:text-[11px] line-clamp-2 min-h-[2lh]" : "text-sm",
+          )}
+        >
+          {label}
+        </span>
         {icon ? (
-          <span className={cn("text-muted-foreground", accentClassName)}>{icon}</span>
+          <span
+            className={cn(
+              "shrink-0 text-muted-foreground",
+              compact ? "[&_svg]:size-4" : "",
+              accentClassName,
+            )}
+          >
+            {icon}
+          </span>
         ) : null}
       </div>
-      <div className="mt-2 text-3xl font-bold tracking-tight">{value}</div>
+      <div
+        className={cn(
+          "font-bold tracking-tight",
+          compact ? "mt-1 text-xl sm:text-2xl" : "mt-2 text-3xl",
+        )}
+      >
+        {value}
+      </div>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );

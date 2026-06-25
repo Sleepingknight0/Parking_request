@@ -19,7 +19,7 @@ import {
 } from "@nacc/ui";
 import { DATE_PATTERN_LABELS_TH, TH, type RequestStatus } from "@nacc/types";
 import { formatThaiDate, formatTimeRange } from "@nacc/utils";
-import { acceptJobAndStart, completeJob, startJob, type ActionResult } from "@/lib/request-actions";
+import { completeJob, startJob, type ActionResult } from "@/lib/request-actions";
 import {
   formatJobScheduleLine,
   formatNextSlotLine,
@@ -30,7 +30,9 @@ import {
   type SecurityJobRow,
 } from "@/lib/security-job-utils";
 import { CompletionPhotoUploader } from "./completion-photo-uploader";
+import { SecuritySignMethodDialog } from "./security-sign-method-dialog";
 import { SecurityPrepBadge } from "./security-prep-badge";
+import { SecuritySignMethodBadge } from "./security-sign-method-badge";
 import { SecurityStatusBadge } from "./security-status-badge";
 
 function todayIso(): string {
@@ -52,6 +54,7 @@ export function SecurityQuickJobCard({
   const [pending, setPending] = React.useState(false);
   const [completeOpen, setCompleteOpen] = React.useState(false);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [signDialogOpen, setSignDialogOpen] = React.useState(false);
 
   const assignedToMe = job.assigned_to === profileId;
   const canAccept = job.status === "approved";
@@ -117,7 +120,10 @@ export function SecurityQuickJobCard({
                 <p className="text-sm text-muted-foreground">ยังไม่ระบุป้ายทะเบียน</p>
               )}
             </div>
-            <SecurityStatusBadge status={job.status as RequestStatus} className="shrink-0 text-[10px]" />
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <SecurityStatusBadge status={job.status as RequestStatus} className="text-[10px]" />
+              <SecuritySignMethodBadge job={job} />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -134,14 +140,9 @@ export function SecurityQuickJobCard({
             {canAccept ? (
               <Button
                 className="h-14 flex-[2] gap-3 text-lg font-semibold"
-                disabled={pending}
-                onClick={() => run(() => acceptJobAndStart(job.id), TH.security.acknowledged)}
+                onClick={() => setSignDialogOpen(true)}
               >
-                {pending ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <ShieldCheck className="h-5 w-5" />
-                )}
+                <ShieldCheck className="h-5 w-5" />
                 {TH.security.acknowledgeJob}
               </Button>
             ) : null}
@@ -261,6 +262,14 @@ export function SecurityQuickJobCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SecuritySignMethodDialog
+        job={job}
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        andStart
+        todayIso={today}
+      />
     </>
   );
 }

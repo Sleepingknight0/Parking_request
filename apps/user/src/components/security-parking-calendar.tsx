@@ -1,31 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { RequestCalendar, type CalendarEvent } from "./request-calendar";
-import { SecurityMobileCalendar } from "./security-mobile-calendar";
+import { ParkingCalendarView } from "./parking-calendar-view";
+import type { CalendarEvent } from "./request-calendar";
 
+/** @deprecated use ParkingCalendarView */
 export function SecurityParkingCalendar({
   events,
   todayIso,
+  maxMobileDays = 14,
+  showDesktop = true,
+  emptyMessage,
 }: {
   events: CalendarEvent[];
   todayIso: string;
+  maxMobileDays?: number;
+  showDesktop?: boolean;
+  emptyMessage?: string;
 }) {
-  const router = useRouter();
-
   return (
-    <>
-      <SecurityMobileCalendar
-        events={events}
-        todayIso={todayIso}
-        onSelectRequest={(id) => router.push(`/security/jobs/${id}`)}
-      />
-      <div className="hidden md:block">
-        <RequestCalendar
-          events={events}
-          onEventClickPath={(id) => `/security/jobs/${id}`}
-        />
-      </div>
-    </>
+    <ParkingCalendarView
+      events={events}
+      todayIso={todayIso}
+      detailPathPrefix="/security/jobs"
+      maxMobileDays={maxMobileDays}
+      showDesktop={showDesktop}
+      emptyMessage={emptyMessage}
+    />
   );
 }

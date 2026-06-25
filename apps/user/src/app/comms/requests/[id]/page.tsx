@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Download, FileText, ImageIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
+  AttachmentPreviewGallery,
+  AttachmentPreviewSection,
   CompletionPhotoGallery,
   PageHeader,
   Button,
@@ -22,16 +24,11 @@ import {
 } from "@nacc/types";
 import { createServiceClient } from "@nacc/db/service";
 import { getCommsRequestById } from "@/lib/comms-data";
-import {
-  formatThaiDate,
-  formatThaiDateTime,
-  formatTimeRange,
-  formatBytes,
-  formatPhone,
-  resolveAttachmentViewUrl,
-} from "@nacc/utils";
+import { formatThaiDate, formatThaiDateTime, formatTimeRange, formatPhone } from "@nacc/utils";
 import { getSignedUrls } from "@/lib/storage";
 import { CommsAttachmentUploader } from "@/components/comms-attachment-uploader";
+import { CommsRequestActions } from "@/components/comms-request-actions";
+import { CommsVerificationBadge } from "@/components/comms-verification-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +51,13 @@ export default async function CommsRequestDetailPage({
   const attachments = request.request_attachments as Attachment[];
   const signed = await getSignedUrls(attachments);
   const grouped = (t: FileType) => attachments.filter((a) => a.file_type === t);
+  const officialLetterCount = grouped("official_letter").length;
 
   return (
     <>
       <PageHeader
-        title={request.request_no}
-        description={request.subject ?? request.official_letter_no}
+        title={request.official_letter_no}
+        description={request.subject ?? request.request_no}
         actions={
           <Button asChild variant="outline">
             <Link href="/comms/requests">{TH.action.back}</Link>
@@ -67,10 +65,17 @@ export default async function CommsRequestDetailPage({
         }
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <StatusBadge status={request.status} />
         <PriorityBadge priority={request.priority} />
+        <CommsVerificationBadge request={request} className="text-xs" />
       </div>
+
+      <Card className="mb-6">
+        <CardContent className="pt-4">
+          <CommsRequestActions request={request} officialLetterCount={officialLetterCount} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -122,14 +127,46 @@ export default async function CommsRequestDetailPage({
               <CardTitle className="text-base">{TH.entity.attachment}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <AttachGroup type="official_letter" items={grouped("official_letter")} signed={signed} requestId={id} />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.official_letter}</p>
+                  <CommsAttachmentUploader requestId={id} fileType="official_letter" label="แนบหนังสือ" />
+                </div>
+                <AttachmentPreviewSection
+                  label=""
+                  items={grouped("official_letter")}
+                  signedSupabaseUrls={signed}
+                  emptyMessage="ยังไม่แนบหนังสือราชการ"
+                />
+              </div>
               <Separator />
-              <AttachGroup type="general_attachment" items={grouped("general_attachment")} signed={signed} requestId={id} />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.general_attachment}</p>
+                  <CommsAttachmentUploader requestId={id} fileType="general_attachment" label="แนบไฟล์" />
+                </div>
+                <AttachmentPreviewSection
+                  label=""
+                  items={grouped("general_attachment")}
+                  signedSupabaseUrls={signed}
+                  emptyMessage="ยังไม่มีไฟล์"
+                />
+              </div>
               <Separator />
               <div>
                 <p className="mb-3 text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>
                 <CompletionPhotoGallery items={grouped("completion_photo")} signedSupabaseUrls={signed} />
               </div>
+              {grouped("cancellation_evidence").length ? (
+                <>
+                  <Separator />
+                  <AttachmentPreviewGallery
+                    items={grouped("cancellation_evidence")}
+                    signedSupabaseUrls={signed}
+                    dialogTitle={FILE_TYPE_LABELS_TH.cancellation_evidence}
+                  />
+                </>
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -142,6 +179,12 @@ export default async function CommsRequestDetailPage({
             <CardContent className="grid gap-3">
               <Info label={TH.entity.assignedTo} value={request.assigned_to_profile?.display_name} />
               <Info label={TH.entity.status} value={STATUS_LABELS_TH[request.status]} />
+              {request.comms_verified_at ? (
+                <Info
+                  label="ยืนยันโดยสื่อสาร"
+                  value={formatThaiDateTime(request.comms_verified_at)}
+                />
+              ) : null}
               {request.admin_note ? <Info label={TH.entity.adminNote} value={request.admin_note} /> : null}
             </CardContent>
           </Card>
@@ -201,63 +244,6 @@ function Info({
     <div className={className}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-medium">{value || "-"}</p>
-    </div>
-  );
-}
-
-function AttachGroup({
-  type,
-  items,
-  signed,
-  requestId,
-}: {
-  type: FileType;
-  items: Attachment[];
-  signed: Record<string, string>;
-  requestId: string;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH[type]}</p>
-        <CommsAttachmentUploader requestId={requestId} fileType={type} label="แนบไฟล์" />
-      </div>
-      {items.length ? (
-        <ul className="space-y-1.5">
-          {items.map((a) => {
-            const url = resolveAttachmentViewUrl(a, signed);
-            const isImage = a.mime_type?.startsWith("image/");
-            return (
-              <li
-                key={a.id}
-                className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-              >
-                <span className="flex items-center gap-2 truncate">
-                  {isImage ? (
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className="truncate">{a.file_name}</span>
-                  <span className="text-xs text-muted-foreground">{formatBytes(a.file_size)}</span>
-                </span>
-                {url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 text-primary hover:underline"
-                  >
-                    <Download className="h-4 w-4" /> เปิด
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="text-xs text-muted-foreground">ยังไม่มีไฟล์</p>
-      )}
     </div>
   );
 }

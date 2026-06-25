@@ -7,10 +7,14 @@ import {
   type SecurityPrepUrgencyLevel,
 } from "@nacc/types";
 import { formatThaiDate, formatTimeRange } from "@nacc/utils";
+import type { RequestListFilters } from "./request-list-filters";
 
 export type SecurityJobRow = ParkingRequestListItem & {
   request_license_plates?: { plate_no: string; vehicle_note: string | null }[];
 };
+
+/** @deprecated use DASHBOARD_URGENT_CALENDAR_DAYS from parking-calendar-constants */
+export { DASHBOARD_URGENT_CALENDAR_DAYS as SECURITY_DASHBOARD_CALENDAR_DAYS } from "@/lib/parking-calendar-constants";
 
 /** @deprecated use PrepUrgencyLevel */
 export type ParkingUrgency = "critical" | "upcoming" | null;
@@ -81,6 +85,40 @@ export function getJobPlateNos(job: SecurityJobRow): string[] {
 export function formatPlateSummary(plates: string[]): string | null {
   if (!plates.length) return null;
   return plates.join(" · ");
+}
+
+export function matchesSecurityJobSearch(job: SecurityJobRow, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const plateHit = getJobPlateNos(job).some((p) => p.toLowerCase().includes(q));
+  if (plateHit) return true;
+  return [
+    job.official_letter_no,
+    job.request_no,
+    job.subject,
+    job.department?.name_th,
+    job.department?.short_name,
+    job.requested_location?.name_th,
+    job.requested_location_text,
+  ]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(q));
+}
+
+export function applySecurityJobListFilters(
+  rows: SecurityJobRow[],
+  query: string,
+  filters: RequestListFilters,
+): SecurityJobRow[] {
+  return rows.filter((row) => {
+    if (!matchesSecurityJobSearch(row, query)) return false;
+    if (filters.status !== "all" && row.status !== filters.status) return false;
+    if (filters.departmentId && row.department_id !== filters.departmentId) return false;
+    if (filters.date && !row.request_dates.some((d) => d.request_date === filters.date)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export function getSortedRequestDates(job: SecurityJobRow): string[] {

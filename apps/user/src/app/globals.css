@@ -1,3 +1,5 @@
+@import "../styles/security-sign-font.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,5 +37,34 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11";
+  }
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .security-sign-print-root {
+    background: white;
+  }
+
+  .sign-print-page {
+    break-after: page;
+    page-break-after: always;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 190mm;
+  }
+
+  .sign-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }

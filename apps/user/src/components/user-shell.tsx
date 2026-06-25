@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
+  CalendarDays,
   ClipboardList,
   FileText,
   Home,
@@ -24,25 +25,40 @@ import { RealtimeRefresh } from "./realtime-refresh";
 interface NavItem {
   href: string;
   label: string;
+  shortLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const OFFICER_NAV: NavItem[] = [
-  { href: "/officer/dashboard", label: TH.nav.officerDashboard, icon: Home },
-  { href: "/officer/requests", label: TH.nav.myRequests, icon: FileText },
-  { href: "/officer/requests/new", label: TH.action.recordLetter, icon: PlusCircle },
+  { href: "/officer/dashboard", label: TH.nav.officerDashboard, shortLabel: TH.nav.officerDashboardShort, icon: Home },
+  { href: "/officer/calendar", label: TH.nav.parkingCalendar, shortLabel: TH.nav.parkingCalendarShort, icon: CalendarDays },
+  { href: "/officer/requests", label: TH.nav.officerRequests, shortLabel: TH.nav.officerRequestsShort, icon: FileText },
+  { href: "/officer/requests/new", label: TH.action.recordLetter, shortLabel: TH.nav.recordLetterShort, icon: PlusCircle },
 ];
 
 const COMMS_NAV: NavItem[] = [
-  { href: "/comms/dashboard", label: "หน้าหลักสื่อสาร", icon: Home },
-  { href: "/comms/requests", label: "หนังสือและคำขอ", icon: ClipboardList },
+  { href: "/comms/dashboard", label: "หน้าหลักสื่อสาร", shortLabel: "หน้าหลัก", icon: Home },
+  { href: "/comms/calendar", label: TH.nav.parkingCalendar, shortLabel: TH.nav.parkingCalendarShort, icon: CalendarDays },
+  { href: "/comms/requests", label: "หนังสือและคำขอ", shortLabel: "รายการ", icon: ClipboardList },
+  { href: "/comms/requests/new", label: TH.comms.recordLetter, shortLabel: TH.nav.commsRecordLetterShort, icon: PlusCircle },
 ];
 
 const SECURITY_NAV: NavItem[] = [
-  { href: "/security/dashboard", label: TH.nav.securityDashboard, icon: ShieldCheck },
-  { href: "/security/jobs", label: TH.nav.jobs, icon: ClipboardList },
-  { href: "/security/history", label: TH.nav.history, icon: FileText },
+  { href: "/security/dashboard", label: TH.nav.securityDashboard, shortLabel: "หน้าหลัก", icon: ShieldCheck },
+  { href: "/security/calendar", label: TH.nav.securityParkingCalendar, shortLabel: TH.nav.parkingCalendarShort, icon: CalendarDays },
+  { href: "/security/jobs", label: TH.nav.jobs, shortLabel: "งาน", icon: ClipboardList },
+  { href: "/security/history", label: TH.nav.history, shortLabel: "ประวัติ", icon: FileText },
 ];
+
+/** Highlight only the most specific nav item (fixes /requests vs /requests/new). */
+function isNavItemActive(pathname: string, href: string, nav: NavItem[]): boolean {
+  const matches = nav.filter(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+  if (!matches.length) return false;
+  const best = matches.reduce((a, b) => (a.href.length >= b.href.length ? a : b));
+  return best.href === href;
+}
 
 export function UserShell({
   mode,
@@ -59,27 +75,27 @@ export function UserShell({
   const nav =
     mode === "officer" ? OFFICER_NAV : mode === "comms" ? COMMS_NAV : SECURITY_NAV;
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
-
-  const navList = (
+  const navList = (compact?: boolean) => (
     <nav className="flex flex-col gap-1 p-3">
       {nav.map((item) => {
         const Icon = item.icon;
+        const active = isNavItemActive(pathname, item.href, nav);
+        const text = compact ? (item.shortLabel ?? item.label) : item.label;
         return (
           <Link
             key={item.href}
             href={item.href}
+            title={item.label}
             onClick={() => setMobileOpen(false)}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-              isActive(item.href)
+              active
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
             <Icon className="h-5 w-5 shrink-0" />
-            {item.label}
+            <span className="min-w-0 truncate">{text}</span>
           </Link>
         );
       })}
@@ -87,26 +103,26 @@ export function UserShell({
   );
 
   const brand = (
-    <div className="flex h-16 items-center gap-2 border-b border-border px-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+    <div className="flex h-14 min-w-0 flex-1 items-center gap-2 px-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
         ป.
       </div>
-      <div className="leading-tight">
-        <div className="text-sm font-semibold">ระบบขอที่จอดรถ</div>
-        <div className="text-xs text-muted-foreground">{USER_MODE_LABELS_TH[mode]}</div>
+      <div className="min-w-0 leading-tight">
+        <div className="truncate text-sm font-semibold">ระบบขอที่จอดรถ</div>
+        <div className="truncate text-xs text-muted-foreground">{USER_MODE_LABELS_TH[mode]}</div>
       </div>
     </div>
   );
 
-  const bottomCols = nav.length <= 2 ? nav.length : 3;
+  const bottomCols = Math.min(nav.length, 4);
 
   return (
     <div className="min-h-screen bg-muted/20 pb-16 lg:pb-0">
       <RealtimeRefresh />
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card lg:flex">
-        {brand}
-        <div className="flex-1 overflow-y-auto">{navList}</div>
+        <div className="border-b border-border">{brand}</div>
+        <div className="flex-1 overflow-y-auto">{navList(false)}</div>
         <div className="border-t border-border p-3">
           <form action={switchRole}>
             <Button type="submit" variant="outline" className="w-full gap-2">
@@ -121,13 +137,13 @@ export function UserShell({
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-card shadow-xl">
-            <div className="flex items-center justify-between border-b border-border pr-2">
+            <div className="flex items-center border-b border-border pr-1">
               {brand}
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setMobileOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-y-auto">{navList}</div>
+            <div className="flex-1 overflow-y-auto">{navList(true)}</div>
             <div className="border-t border-border p-3">
               <form action={switchRole}>
                 <Button type="submit" variant="outline" className="w-full gap-2">
@@ -141,13 +157,13 @@ export function UserShell({
       ) : null}
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card/80 px-3 backdrop-blur sm:px-4">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
           <div className="ml-auto lg:hidden">
             <form action={switchRole}>
-              <Button type="submit" variant="outline" size="sm" className="gap-2">
+              <Button type="submit" variant="outline" size="sm" className="gap-1.5 text-xs">
                 <ArrowLeftRight className="h-4 w-4" />
                 เปลี่ยนบทบาท
               </Button>
@@ -160,22 +176,26 @@ export function UserShell({
 
       {nav.length > 1 ? (
         <nav
-          className="fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
           style={{ gridTemplateColumns: `repeat(${bottomCols}, minmax(0, 1fr))` }}
         >
           {nav.map((item) => {
             const Icon = item.icon;
+            const active = isNavItemActive(pathname, item.href, nav);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                title={item.label}
                 className={cn(
-                  "flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px]",
-                  isActive(item.href) ? "text-primary" : "text-muted-foreground",
+                  "flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-[10px] leading-tight",
+                  active ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-5 w-5" />
-                <span className="line-clamp-1">{item.label}</span>
+                <Icon className={cn("h-5 w-5", active && "stroke-[2.5px]")} />
+                <span className="max-w-full truncate px-0.5">
+                  {item.shortLabel ?? item.label}
+                </span>
               </Link>
             );
           })}

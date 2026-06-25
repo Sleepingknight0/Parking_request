@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@nacc/ui";
 import { TH } from "@nacc/types";
-import { createServerSupabase } from "@nacc/db/server";
+import { getUserAppDb } from "@/lib/user-db";
 import { getRequestById } from "@nacc/db/queries";
 import { OfficerRequestForm } from "@/components/officer-request-form";
 
@@ -13,7 +13,7 @@ export default async function EditOfficerRequestPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createServerSupabase();
+  const supabase = getUserAppDb();
   const [request, refs] = await Promise.all([
     getRequestById(supabase, id),
     Promise.all([
@@ -27,18 +27,22 @@ export default async function EditOfficerRequestPage({
   }
 
   const [{ data: departments }, { data: locations }] = refs;
+  const existingOfficialLetterCount = request.request_attachments.filter(
+    (attachment) => attachment.file_type === "official_letter",
+  ).length;
 
   return (
     <>
       <PageHeader
         title={`${TH.action.edit}: ${request.official_letter_no}`}
-        description="แก้ไขได้เฉพาะแบบร่างหรือคำขอที่ยังไม่ถูกมอบหมายงาน"
+        description="แก้ไขได้เฉพาะแบบร่างหรือคำขอที่ยังไม่ถูกมอบหมายงาน (ทุกคนในทีมแก้ไขร่วมกันได้)"
       />
       <OfficerRequestForm
         mode="edit"
         requestId={id}
         departments={(departments ?? []) as { id: string; name_th: string }[]}
         locations={(locations ?? []) as { id: string; name_th: string }[]}
+        existingOfficialLetterCount={existingOfficialLetterCount}
         initial={{
           department_id: request.department_id ?? "",
           official_letter_no: request.official_letter_no,

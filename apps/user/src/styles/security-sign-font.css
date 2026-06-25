@@ -1,0 +1,19 @@
+@font-face {
+  font-family: "TH Sarabun IT9";
+  src: url("/fonts/THSarabunIT9.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TH Sarabun IT9";
+  src: url("/fonts/THSarabunIT9.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.security-sign-font {
+  font-family: "TH Sarabun IT9", Sarabun, sans-serif;
+}

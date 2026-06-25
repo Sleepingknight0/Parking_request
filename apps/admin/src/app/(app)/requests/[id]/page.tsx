@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Paperclip, FileText, ImageIcon, Download } from "lucide-react";
+import { ArrowRight, Paperclip, FileText, ImageIcon, Download, Printer } from "lucide-react";
 import {
   CompletionPhotoGallery,
   PageHeader,
@@ -18,10 +18,10 @@ import {
   STATUS_LABELS_TH,
   FILE_TYPE_LABELS_TH,
   type FileType,
-  type ProfileRef,
   type Attachment,
 } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
+import { requireProfile } from "@nacc/auth/guards";
 import { getRequestById } from "@nacc/db/queries";
 import {
   formatThaiDate,
@@ -43,17 +43,13 @@ export default async function RequestDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const { profile } = await requireProfile();
+  const canWrite = profile.role === "super_admin" || profile.role === "admin";
   const supabase = await createServerSupabase();
   const request = await getRequestById(supabase, id);
   if (!request) notFound();
 
-  const [{ data: staff }, { data: history }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id,display_name,username,role")
-      .eq("role", "security_staff")
-      .eq("is_active", true)
-      .order("display_name"),
+  const [{ data: history }] = await Promise.all([
     supabase
       .from("request_status_history")
       .select("id,old_status,new_status,note,created_at,changed_by_profile:profiles!changed_by(display_name)")
@@ -72,9 +68,16 @@ export default async function RequestDetailPage({
         title={request.request_no}
         description={request.subject ?? request.official_letter_no}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/requests">{TH.action.back}</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/requests/${id}/print`} target="_blank" className="gap-2">
+                <Printer className="h-4 w-4" /> พิมพ์ใบคำขอ
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/requests">{TH.action.back}</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -86,7 +89,7 @@ export default async function RequestDetailPage({
       <RequestActions
         id={id}
         status={request.status}
-        securityStaff={(staff ?? []) as ProfileRef[]}
+        readOnly={!canWrite}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -151,6 +154,7 @@ export default async function RequestDetailPage({
 
           <AttachmentsCard
             requestId={id}
+            canUpload={canWrite}
             officialLetters={grouped("official_letter")}
             general={grouped("general_attachment")}
             completion={grouped("completion_photo")}
@@ -228,6 +232,7 @@ function Info({
 
 function AttachmentsCard({
   requestId,
+  canUpload,
   officialLetters,
   general,
   completion,
@@ -235,6 +240,7 @@ function AttachmentsCard({
   signed,
 }: {
   requestId: string;
+  canUpload: boolean;
   officialLetters: Attachment[];
   general: Attachment[];
   completion: Attachment[];
@@ -245,16 +251,16 @@ function AttachmentsCard({
     <Card>
       <CardHeader><CardTitle className="text-base">{TH.entity.attachment}</CardTitle></CardHeader>
       <CardContent className="space-y-5">
-        <AttachGroup type="official_letter" items={officialLetters} signed={signed} requestId={requestId} />
+        <AttachGroup type="official_letter" items={officialLetters} signed={signed} requestId={requestId} canUpload={canUpload} />
         <Separator />
         <div>
           <p className="mb-3 text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>
           <CompletionPhotoGallery items={completion} signedSupabaseUrls={signed} />
         </div>
         <Separator />
-        <AttachGroup type="cancellation_evidence" items={cancellation} signed={signed} requestId={requestId} />
+        <AttachGroup type="cancellation_evidence" items={cancellation} signed={signed} requestId={requestId} canUpload={canUpload} />
         <Separator />
-        <AttachGroup type="general_attachment" items={general} signed={signed} requestId={requestId} />
+        <AttachGroup type="general_attachment" items={general} signed={signed} requestId={requestId} canUpload={canUpload} />
       </CardContent>
     </Card>
   );
@@ -265,17 +271,21 @@ function AttachGroup({
   items,
   signed,
   requestId,
+  canUpload,
 }: {
   type: FileType;
   items: Attachment[];
   signed: Record<string, string>;
   requestId: string;
+  canUpload: boolean;
 }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH[type]}</p>
-        <AttachmentUploader requestId={requestId} fileType={type} label="แนบไฟล์" />
+        {canUpload ? (
+          <AttachmentUploader requestId={requestId} fileType={type} label="แนบไฟล์" />
+        ) : null}
       </div>
       {items.length ? (
         <ul className="space-y-1.5">

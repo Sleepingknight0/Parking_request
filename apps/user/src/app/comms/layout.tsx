@@ -7,11 +7,11 @@ export default async function CommsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireAppMode("comms");
+  const { displayName } = await requireAppMode("comms");
 
   return (
     <UserShell
-      profile={{ display_name: profile.display_name }}
+      profile={{ display_name: displayName }}
       mode="comms"
       switchRole={switchRole}
     >

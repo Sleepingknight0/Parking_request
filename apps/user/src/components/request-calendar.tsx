@@ -35,7 +35,13 @@ class CalendarErrorBoundary extends React.Component<
   }
 }
 
-function CalendarFallback({ events }: { events: CalendarEvent[] }) {
+function CalendarFallback({
+  events,
+  onEventClickPath,
+}: {
+  events: CalendarEvent[];
+  onEventClickPath?: (requestId: string) => string;
+}) {
   const router = useRouter();
   const visibleEvents = events.slice(0, 8);
 
@@ -51,7 +57,13 @@ function CalendarFallback({ events }: { events: CalendarEvent[] }) {
             key={event.id}
             type="button"
             className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent"
-            onClick={() => router.push(`/security/jobs/${event.requestId}`)}
+            onClick={() =>
+              router.push(
+                onEventClickPath
+                  ? onEventClickPath(event.requestId)
+                  : `/security/jobs/${event.requestId}`,
+              )
+            }
           >
             <span
               className="h-3 w-3 shrink-0 rounded-full"
@@ -106,7 +118,7 @@ export function RequestCalendar({
     };
   }, []);
 
-  const fallback = <CalendarFallback events={events} />;
+  const fallback = <CalendarFallback events={events} onEventClickPath={onEventClickPath} />;
 
   return (
     <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
