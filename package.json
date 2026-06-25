@@ -25,7 +25,8 @@
     "db:seed": "supabase db push && echo 'Run seed via SQL editor or: psql $DATABASE_URL -f supabase/seed.sql'",
     "db:types": "supabase gen types typescript --linked --schema public > packages/types/src/database.types.ts",
     "seed": "tsx scripts/seed.ts",
-    "import:legacy": "tsx scripts/import-legacy.ts"
+    "import:legacy": "tsx scripts/import-legacy.ts",
+    "push:sheet": "tsx scripts/push-to-sheet.ts"
   },
   "devDependencies": {
     "@nacc/types": "workspace:*",

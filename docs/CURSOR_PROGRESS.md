@@ -15,7 +15,8 @@
 
 ### Manual QA
 
-- [ ] `pnpm dev:reset` then login `security01` / `password`
+- [x] Vercel production: admin https://nacc-parking-admin.vercel.app , user https://nacc-parking-user.vercel.app
+- [ ] Add Supabase Auth redirect URLs for both Vercel domains
 - [ ] Upload completion photo on in-progress job
 - [ ] Complete job; verify gallery on security + admin + officer detail pages
 
