@@ -14,10 +14,17 @@ export function supabaseAnonKey(): string {
 
 /** Server-only. Throws if called where the key is absent. */
 export function supabaseServiceKey(): string {
-  const v = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const v = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!v) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY (server only)");
   return v;
 }
+
+export function hasSupabaseServiceKey(): boolean {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
+export const SUPABASE_SERVICE_KEY_ERROR_TH =
+  "ยังไม่ได้ตั้งค่า SUPABASE_SERVICE_ROLE_KEY ใน .env.local (จำเป็นสำหรับอัปโหลดไฟล์แนบ Supabase Storage)";
 
 /** Internal synthetic-email domain for username login (default: nacc.local). */
 export function authEmailDomain(): string {

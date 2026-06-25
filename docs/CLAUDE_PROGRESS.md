@@ -123,3 +123,38 @@ Known follow-up:
 
 - Regenerate official Supabase types after linking the project and restore typed runtime clients.
 - Run browser QA after app env files are provided.
+
+## Session: Legacy importer + QA (Claude)
+
+- Built `scripts/import-legacy.ts` (`pnpm import:legacy --dry-run | --apply [--file=]`):
+  maps the 8 old sheet columns -> schema, matches departments/locations by name,
+  de-dupes by `official_letter_no`, tolerates bad rows, prints a summary, tags
+  rows with `legacy_source='google-sheet'` + `legacy_*` columns. Past-dated rows
+  import as `completed`, else `submitted`. Validated it loads/runs (graceful
+  "file not found" exit when no CSV present).
+- Added `docs/LEGACY_IMPORT.md` (mapping, dry-run/apply, dedupe, rollback).
+- Fixed the supabase-js `never` write-types root cause: rewrote
+  `packages/types/src/database.types.ts` to use standalone Row/Insert aliases
+  (no self-reference through `Database[...]`), so table payloads stay concrete.
+
+Workflow note (IMPORTANT - supersedes an earlier decision):
+
+- An earlier grilling chose a SIMPLIFIED workflow (draft->submitted->assigned...,
+  no approval gate). The codebase was later converted by Codex/Cursor to the FULL
+  brief workflow (submitted->under_review->approved->assigned->in_progress->
+  completed, plus rejected). All layers are now CONSISTENT on the full workflow:
+  `enums.ts` STATUS_TRANSITIONS, the SQL `is_valid_status_transition` trigger,
+  RLS policies, and both apps' action buttons. No internal mismatch remains. If
+  the simpler real-world flow is preferred later, change all four places together.
+
+Full-suite verification (this session):
+
+- `pnpm install`, `pnpm lint`, `pnpm typecheck` (8 packages), and
+  `pnpm build` (both apps: 16 admin + 13 user routes) all PASS.
+
+Remaining to be usable end-to-end:
+
+- Paste `SUPABASE_SERVICE_ROLE_KEY` into `.env` / Vercel, then `pnpm seed`
+  (creates admin/admin + demo accounts + sample requests).
+- Optional: drop a Sheet CSV at `private-data/legacy.csv` and run
+  `pnpm import:legacy --dry-run` then `--apply`.

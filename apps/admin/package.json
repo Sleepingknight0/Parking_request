@@ -12,6 +12,7 @@
   "dependencies": {
     "@nacc/auth": "workspace:*",
     "@nacc/db": "workspace:*",
+    "@nacc/storage": "workspace:*",
     "@nacc/types": "workspace:*",
     "@nacc/ui": "workspace:*",
     "@nacc/utils": "workspace:*",

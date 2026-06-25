@@ -18,3 +18,4 @@ export * from "./components/status-badge";
 export * from "./components/states";
 export * from "./components/sonner";
 export * from "./components/login-card";
+export * from "./components/completion-photo-gallery";

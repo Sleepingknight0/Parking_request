@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Paperclip, FileText, ImageIcon, Download } from "lucide-react";
 import {
+  CompletionPhotoGallery,
   PageHeader,
   Button,
   Card,
@@ -28,6 +29,7 @@ import {
   formatTimeRange,
   formatBytes,
   formatPhone,
+  resolveAttachmentViewUrl,
 } from "@nacc/utils";
 import { getSignedUrls } from "@/lib/storage";
 import { RequestActions } from "@/components/request-actions";
@@ -60,7 +62,7 @@ export default async function RequestDetailPage({
   ]);
 
   const attachments = request.request_attachments as Attachment[];
-  const signed = await getSignedUrls(attachments.map((a) => a.file_path));
+  const signed = await getSignedUrls(attachments);
 
   const grouped = (t: FileType) => attachments.filter((a) => a.file_type === t);
 
@@ -245,7 +247,10 @@ function AttachmentsCard({
       <CardContent className="space-y-5">
         <AttachGroup type="official_letter" items={officialLetters} signed={signed} requestId={requestId} />
         <Separator />
-        <AttachGroup type="completion_photo" items={completion} signed={signed} requestId={requestId} />
+        <div>
+          <p className="mb-3 text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>
+          <CompletionPhotoGallery items={completion} signedSupabaseUrls={signed} />
+        </div>
         <Separator />
         <AttachGroup type="cancellation_evidence" items={cancellation} signed={signed} requestId={requestId} />
         <Separator />
@@ -275,7 +280,7 @@ function AttachGroup({
       {items.length ? (
         <ul className="space-y-1.5">
           {items.map((a) => {
-            const url = signed[a.file_path];
+            const url = resolveAttachmentViewUrl(a, signed);
             const isImage = a.mime_type?.startsWith("image/");
             return (
               <li key={a.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">

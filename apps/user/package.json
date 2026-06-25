@@ -12,11 +12,13 @@
   "dependencies": {
     "@nacc/auth": "workspace:*",
     "@nacc/db": "workspace:*",
+    "@nacc/storage": "workspace:*",
     "@nacc/types": "workspace:*",
     "@nacc/ui": "workspace:*",
     "@nacc/utils": "workspace:*",
     "@hookform/resolvers": "^3.10.0",
     "@supabase/supabase-js": "^2.47.10",
+    "browser-image-compression": "^2.0.2",
     "dayjs": "^1.11.13",
     "lucide-react": "^0.469.0",
     "next": "^15.1.3",

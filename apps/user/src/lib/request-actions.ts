@@ -14,6 +14,8 @@ import {
   type RequestFormInput,
   type FileType,
 } from "@nacc/types";
+import { completeJobWithPhotos } from "./completion-photo-actions";
+import { assertSupabaseStorageReady } from "./storage-guards";
 
 export interface ActionResult {
   ok: boolean;
@@ -255,32 +257,7 @@ export async function startJob(id: string): Promise<ActionResult> {
 }
 
 export async function completeJob(id: string, note?: string): Promise<ActionResult> {
-  const { profile } = await requireProfile({ roles: ["security_staff"] });
-  const supabase = await createServerSupabase();
-  const { count } = await supabase
-    .from("request_attachments")
-    .select("id", { count: "exact", head: true })
-    .eq("request_id", id)
-    .eq("file_type", "completion_photo");
-
-  if (!count || count < 1) {
-    return { ok: false, error: "ต้องแนบรูปถ่ายส่งงานอย่างน้อย 1 รูปก่อนปิดงาน" };
-  }
-
-  const { error } = await supabase
-    .from("parking_requests")
-    .update({
-      status: "completed",
-      completion_note: note?.trim() || null,
-      completed_by: profile.id,
-    })
-    .eq("id", id)
-    .eq("assigned_to", profile.id);
-
-  if (error) return { ok: false, error: error.message };
-  await logActivity("request.complete", id, profile.id, { app: "user" });
-  revalidateUserRequest(id);
-  return { ok: true, id };
+  return completeJobWithPhotos(id, note);
 }
 
 export async function cancelJob(id: string, reason: string): Promise<ActionResult> {
@@ -308,6 +285,16 @@ export async function uploadUserAttachment(
   fileType: FileType,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (fileType === "completion_photo") {
+    return {
+      ok: false,
+      error: "กรุณาใช้ปุ่มแนบรูปส่งงานสำหรับรูปถ่ายส่งงาน",
+    };
+  }
+
+  const storageGate = assertSupabaseStorageReady();
+  if (storageGate) return storageGate;
+
   const { profile } = await requireProfile({ roles: ["officer", "security_staff"] });
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "กรุณาเลือกไฟล์" };
@@ -319,7 +306,7 @@ export async function uploadUserAttachment(
   const allowedForRole =
     profile.role === "officer"
       ? fileType === "official_letter" || fileType === "general_attachment"
-      : fileType === "completion_photo" || fileType === "cancellation_evidence";
+      : fileType === "cancellation_evidence";
 
   if (!allowedForRole) return { ok: false, error: "บัญชีของคุณไม่มีสิทธิ์แนบไฟล์ประเภทนี้" };
 
@@ -341,6 +328,7 @@ export async function uploadUserAttachment(
     file_path: path,
     mime_type: file.type,
     file_size: file.size,
+    storage_provider: "supabase",
   });
   if (dbError) return { ok: false, error: dbError.message };
 

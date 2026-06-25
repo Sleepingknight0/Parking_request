@@ -28,7 +28,30 @@ NEXT_PUBLIC_ADMIN_APP_URL=https://your-admin-domain.example
 NEXT_PUBLIC_USER_APP_URL=https://your-user-domain.example
 ```
 
-Never commit real secrets. `SUPABASE_SERVICE_ROLE_KEY` must be server-side only.
+Google Drive (security staff completion photos — user app + admin image proxy):
+
+```env
+GOOGLE_DRIVE_CLIENT_EMAIL=
+GOOGLE_DRIVE_PRIVATE_KEY=
+GOOGLE_DRIVE_FOLDER_ID=
+GOOGLE_DRIVE_SHARED_DRIVE_ID=
+```
+
+See `docs/ATTACHMENTS.md` for Drive folder and service account setup.
+
+Never commit real secrets. `SUPABASE_SERVICE_ROLE_KEY` and Google private keys must be server-side only.
+
+### Local development
+
+Copy `apps/admin/.env.example` → `apps/admin/.env.local` and `apps/user/.env.example` → `apps/user/.env.local`.
+
+- `SUPABASE_SERVICE_ROLE_KEY` is required for Supabase Storage uploads (official letters).
+- Google Drive env vars are required for security staff **completion photo** uploads.
+- Restart `pnpm dev` after changing env files.
+
+### Vercel
+
+Add the same variables under each project's **Settings → Environment Variables** (Production + Preview). Do not prefix service role or Google keys with `NEXT_PUBLIC_`.
 
 ## Database Setup
 

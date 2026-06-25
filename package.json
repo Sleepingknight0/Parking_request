@@ -11,6 +11,8 @@
     "dev": "turbo run dev",
     "dev:admin": "turbo run dev --filter=@nacc/admin",
     "dev:user": "turbo run dev --filter=@nacc/user",
+    "dev:reset": "rimraf apps/admin/.next apps/user/.next && turbo run dev",
+    "clean:next": "rimraf apps/admin/.next apps/user/.next",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

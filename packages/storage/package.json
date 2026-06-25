@@ -1,0 +1,33 @@
+{
+  "name": "@nacc/storage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./google-drive": "./src/google-drive.ts",
+    "./google-sheets": "./src/google-sheets.ts",
+    "./env": "./src/env.ts",
+    "./attachment-image": "./src/attachment-image.ts"
+  },
+  "scripts": {
+    "lint": "echo \"(no lint) @nacc/storage\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nacc/db": "workspace:*",
+    "@nacc/types": "workspace:*",
+    "googleapis": "^144.0.0",
+    "server-only": "^0.0.1"
+  },
+  "peerDependencies": {
+    "next": ">=15"
+  },
+  "devDependencies": {
+    "@nacc/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

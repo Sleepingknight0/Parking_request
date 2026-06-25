@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@nacc/db/server";
+import { syncRequestToSheet } from "./sheet-sync";
 import { createServiceClient } from "@nacc/db/service";
+import { hasSupabaseServiceKey, SUPABASE_SERVICE_KEY_ERROR_TH } from "@nacc/db";
 import { requireProfile } from "@nacc/auth/guards";
 import {
   requestFormSchema,
@@ -106,6 +108,7 @@ export async function createRequest(
   await logActivity("request.create", req.id, profile.id, { submit });
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  void syncRequestToSheet(req.id);
   return { ok: true, id: req.id };
 }
 
@@ -166,6 +169,7 @@ export async function updateRequest(
   await logActivity("request.update", id, profile.id);
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -181,6 +185,7 @@ export async function submitRequest(id: string): Promise<ActionResult> {
   await logActivity("request.submit", id, profile.id);
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -197,6 +202,7 @@ export async function markUnderReview(id: string): Promise<ActionResult> {
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -212,6 +218,7 @@ export async function approveRequest(id: string): Promise<ActionResult> {
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -231,6 +238,7 @@ export async function rejectRequest(id: string, reason?: string): Promise<Action
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -266,6 +274,7 @@ export async function assignRequest(
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/assignments");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -284,6 +293,7 @@ export async function changeStatus(
   await logActivity("request.status_change", id, profile.id, { to: toStatus });
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -319,6 +329,7 @@ export async function completeRequest(
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -343,6 +354,7 @@ export async function cancelRequest(
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  void syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -352,6 +364,9 @@ export async function uploadAttachment(
   fileType: FileType,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (!hasSupabaseServiceKey()) {
+    return { ok: false, error: SUPABASE_SERVICE_KEY_ERROR_TH };
+  }
   const { profile } = await requireProfile({ roles: ADMIN_APP_ROLES });
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -382,6 +397,7 @@ export async function uploadAttachment(
     file_path: path,
     mime_type: file.type,
     file_size: file.size,
+    storage_provider: "supabase",
   });
   if (dbErr) return { ok: false, error: dbErr.message };
 
