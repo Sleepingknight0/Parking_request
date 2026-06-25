@@ -219,6 +219,11 @@ type AttachmentsRow = {
   mime_type: string | null;
   file_size: number | null;
   description: string | null;
+  storage_provider: string;
+  external_file_id: string | null;
+  external_url: string | null;
+  thumbnail_url: string | null;
+  metadata: Json | null;
   created_at: string;
 };
 type AttachmentsInsert = {
@@ -231,6 +236,11 @@ type AttachmentsInsert = {
   mime_type?: string | null;
   file_size?: number | null;
   description?: string | null;
+  storage_provider?: string;
+  external_file_id?: string | null;
+  external_url?: string | null;
+  thumbnail_url?: string | null;
+  metadata?: Json | null;
   created_at?: string;
 };
 

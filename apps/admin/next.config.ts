@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "@nacc/db",
     "@nacc/auth",
     "@nacc/utils",
+    "@nacc/storage",
   ],
   eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },

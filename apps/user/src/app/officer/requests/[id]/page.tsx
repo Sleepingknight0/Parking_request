@@ -7,6 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CompletionPhotoGallery,
   PageHeader,
   Separator,
   StatusBadge,
@@ -19,7 +20,7 @@ import {
 } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
 import { getRequestById } from "@nacc/db/queries";
-import { formatBytes, formatPhone, formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatBytes, formatPhone, formatThaiDate, formatTimeRange, resolveAttachmentViewUrl } from "@nacc/utils";
 import { OfficerRequestActions } from "@/components/officer-request-actions";
 import { UserAttachmentUploader } from "@/components/user-attachment-uploader";
 import { getSignedUrls } from "@/lib/storage";
@@ -37,7 +38,7 @@ export default async function OfficerRequestDetailPage({
   if (!request) notFound();
 
   const attachments = request.request_attachments as Attachment[];
-  const signed = await getSignedUrls(attachments.map((a) => a.file_path));
+  const signed = await getSignedUrls(attachments);
   const grouped = (type: FileType) => attachments.filter((a) => a.file_type === type);
 
   return (
@@ -152,7 +153,10 @@ export default async function OfficerRequestDetailPage({
                 upload={<UserAttachmentUploader requestId={id} fileType="general_attachment" />}
               />
               <Separator />
-              <AttachGroup type="completion_photo" items={grouped("completion_photo")} signed={signed} />
+              <div>
+                <p className="mb-3 text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>
+                <CompletionPhotoGallery items={grouped("completion_photo")} signedSupabaseUrls={signed} />
+              </div>
               <Separator />
               <AttachGroup type="cancellation_evidence" items={grouped("cancellation_evidence")} signed={signed} />
             </CardContent>
@@ -213,7 +217,7 @@ function AttachGroup({
       {items.length ? (
         <ul className="space-y-1.5">
           {items.map((attachment) => {
-            const url = signed[attachment.file_path];
+            const url = resolveAttachmentViewUrl(attachment, signed);
             const isImage = attachment.mime_type?.startsWith("image/");
             return (
               <li key={attachment.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">

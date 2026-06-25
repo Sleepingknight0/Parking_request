@@ -7,6 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CompletionPhotoGallery,
   PageHeader,
   Separator,
   StatusBadge,
@@ -20,8 +21,9 @@ import {
 import { requireProfile } from "@nacc/auth/guards";
 import { createServerSupabase } from "@nacc/db/server";
 import { getRequestById } from "@nacc/db/queries";
-import { formatBytes, formatPhone, formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatBytes, formatPhone, formatThaiDate, formatTimeRange, resolveAttachmentViewUrl } from "@nacc/utils";
 import { SecurityJobActions } from "@/components/security-job-actions";
+import { CompletionPhotoUploader } from "@/components/completion-photo-uploader";
 import { UserAttachmentUploader } from "@/components/user-attachment-uploader";
 import { getSignedUrls } from "@/lib/storage";
 
@@ -39,9 +41,14 @@ export default async function SecurityJobDetailPage({
   if (!request) notFound();
 
   const attachments = request.request_attachments as Attachment[];
-  const signed = await getSignedUrls(attachments.map((a) => a.file_path));
+  const signed = await getSignedUrls(attachments);
+  const completionPhotos = attachments.filter((a) => a.file_type === "completion_photo");
   const grouped = (type: FileType) => attachments.filter((a) => a.file_type === type);
   const assignedToMe = request.assigned_to === profile.id;
+  const uploaderById: Record<string, string> = {};
+  if (request.assigned_to_profile?.id) {
+    uploaderById[request.assigned_to_profile.id] = request.assigned_to_profile.display_name;
+  }
 
   return (
     <>
@@ -131,16 +138,19 @@ export default async function SecurityJobDetailPage({
             <CardContent className="space-y-5">
               <AttachGroup type="official_letter" items={grouped("official_letter")} signed={signed} />
               <Separator />
-              <AttachGroup
-                type="completion_photo"
-                items={grouped("completion_photo")}
-                signed={signed}
-                upload={
-                  assignedToMe && request.status === "in_progress" ? (
-                    <UserAttachmentUploader requestId={id} fileType="completion_photo" label="แนบรูปส่งงาน" />
-                  ) : undefined
-                }
-              />
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">{TH.entity.completionPhoto}</p>
+                  {assignedToMe && ["assigned", "in_progress"].includes(request.status) ? (
+                    <CompletionPhotoUploader requestId={id} />
+                  ) : null}
+                </div>
+                <CompletionPhotoGallery
+                  items={completionPhotos}
+                  signedSupabaseUrls={signed}
+                  uploaderById={uploaderById}
+                />
+              </div>
               <Separator />
               <AttachGroup
                 type="cancellation_evidence"
@@ -212,7 +222,7 @@ function AttachGroup({
       {items.length ? (
         <ul className="space-y-1.5">
           {items.map((attachment) => {
-            const url = signed[attachment.file_path];
+            const url = resolveAttachmentViewUrl(attachment, signed);
             const isImage = attachment.mime_type?.startsWith("image/");
             return (
               <li key={attachment.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">

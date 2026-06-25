@@ -123,6 +123,16 @@ Allowed `file_type` values:
 - `completion_photo`
 - `cancellation_evidence`
 
+Storage fields (migration `0006_attachment_providers.sql`):
+
+- `storage_provider` — `supabase` (default) or `google_drive`
+- `external_file_id` — provider file id (Google Drive file id for completion photos)
+- `external_url` — optional view link
+- `thumbnail_url` — optional thumbnail link
+- `metadata` — JSON (compression stats, original name/size, etc.)
+
+Completion photos from security staff use `storage_provider = supabase` (bucket path under `completion_photos/`). Legacy rows may use `google_drive` and are served via authenticated `/api/attachments/[id]/image`.
+
 ### request_status_history
 
 Append-only status transition history written by trigger.

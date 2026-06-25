@@ -9,6 +9,7 @@ import type {
   Priority,
   DatePattern,
   FileType,
+  StorageProvider,
 } from "./enums";
 
 export type Profile = Omit<Tables<"profiles">, "role"> & { role: Role };
@@ -21,8 +22,9 @@ export type StatusHistory = Tables<"request_status_history">;
 export type ActivityLog = Tables<"activity_logs">;
 export type SheetSyncLog = Tables<"sheet_sync_logs">;
 
-export type Attachment = Omit<Tables<"request_attachments">, "file_type"> & {
+export type Attachment = Omit<Tables<"request_attachments">, "file_type" | "storage_provider"> & {
   file_type: FileType;
+  storage_provider: StorageProvider;
 };
 
 export type ParkingRequest = Omit<

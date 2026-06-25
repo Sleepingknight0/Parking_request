@@ -172,6 +172,20 @@ export const DATE_PATTERN_LABELS_TH: Record<DatePattern, string> = {
 
 /* ───────────────────────── Attachments / storage ───────────────────────── */
 
+export const STORAGE_PROVIDERS = ["supabase", "google_drive"] as const;
+export type StorageProvider = (typeof STORAGE_PROVIDERS)[number];
+
+export const COMPLETION_PHOTO_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+export type CompletionPhotoMimeType = (typeof COMPLETION_PHOTO_MIME_TYPES)[number];
+
+export function isCompletionPhotoMimeType(mime: string): mime is CompletionPhotoMimeType {
+  return (COMPLETION_PHOTO_MIME_TYPES as readonly string[]).includes(mime);
+}
+
 export const FILE_TYPES = [
   "official_letter",
   "general_attachment",
