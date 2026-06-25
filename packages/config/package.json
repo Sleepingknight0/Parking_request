@@ -1,0 +1,20 @@
+{
+  "name": "@nacc/config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.nextjs.json",
+    "tailwind.preset.js"
+  ],
+  "exports": {
+    "./tailwind": "./tailwind.preset.js",
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.nextjs.json": "./tsconfig.nextjs.json"
+  },
+  "scripts": {
+    "lint": "echo \"(no lint) @nacc/config\"",
+    "typecheck": "echo \"(no typecheck) @nacc/config\""
+  }
+}

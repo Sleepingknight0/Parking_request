@@ -1,0 +1,28 @@
+# Supabase CLI config. `project_id` is the local project name; link the hosted
+# project with: pnpm supabase link --project-ref <your-ref>
+project_id = "nacc-parking"
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+# Username login maps to synthetic emails (e.g. admin@nacc.local).
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000", "http://localhost:3001"]
+enable_signup = false
+enable_confirmations = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false

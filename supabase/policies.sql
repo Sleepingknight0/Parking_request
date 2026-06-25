@@ -1,0 +1,35 @@
+-- ============================================================================
+-- RLS POLICY REFERENCE
+--
+-- The CANONICAL, APPLIED policies live in:
+--   supabase/migrations/0002_auth.sql   (role helper functions)
+--   supabase/migrations/0003_rls.sql    (all table policies)
+--   supabase/migrations/0004_storage.sql (storage bucket policies)
+--
+-- This file is a human-readable summary only. Do NOT add policies here that are
+-- not also in a migration, or the apps and DB will drift.
+-- ============================================================================
+--
+-- Roles & access summary
+-- ----------------------------------------------------------------------------
+-- super_admin / admin   full read + write on every table
+-- officer               read+write OWN parking_requests (created_by = self);
+--                       UPDATE only while status ∈ {draft, submitted} AND
+--                       assigned_to IS NULL; may DELETE own drafts
+-- security_staff        READ requests in {submitted, assigned, in_progress,
+--                       completed, cancelled}; may UPDATE to accept a submitted
+--                       job (assigned_to → self) or progress a job assigned to
+--                       self (in_progress / completed / cancelled)
+-- viewer                read-only on everything; no writes
+--
+-- Child tables (request_dates, request_license_plates, request_attachments,
+-- request_status_history) inherit access via can_read_request() /
+-- can_write_request().
+--
+-- activity_logs         admin SELECT; any active user may INSERT own rows
+-- sheet_sync_logs       admin only
+-- request_counters      no authenticated access; managed by next_request_no()
+--
+-- Storage (parking-request-files, private bucket): admin direct access; all
+-- other reads/writes go through service-role server actions after app checks.
+-- ============================================================================
