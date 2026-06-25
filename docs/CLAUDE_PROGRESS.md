@@ -117,7 +117,7 @@ Verification:
 
 Runtime QA blocker:
 
-- ~~No `.env.local` or app-level Supabase env files are present in the workspace.~~ Resolved: local Supabase env wired (`.env`, `apps/admin/.env.local`, `apps/user/.env.local`) pointing at `http://127.0.0.1:54321`. `pnpm supabase start` + `pnpm seed` run; demo login `admin` / `admin`.
+- Hosted Supabase project `Parking_request` (`pgwpmmmsdobwvxcwlleu`) linked in env files. Migrations 0001–0005 applied; reference seed (45 departments, 10 locations) loaded. `SUPABASE_SERVICE_ROLE_KEY` still needs pasting from dashboard before `pnpm seed` and file-upload server actions work.
 
 Known follow-up:
 
