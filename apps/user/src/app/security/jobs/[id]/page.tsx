@@ -10,7 +10,6 @@ import {
   CompletionPhotoGallery,
   PageHeader,
   Separator,
-  StatusBadge,
 } from "@nacc/ui";
 import {
   FILE_TYPE_LABELS_TH,
@@ -18,13 +17,20 @@ import {
   type Attachment,
   type FileType,
 } from "@nacc/types";
-import { requireProfile } from "@nacc/auth/guards";
 import { createServerSupabase } from "@nacc/db/server";
 import { getRequestById } from "@nacc/db/queries";
-import { formatBytes, formatPhone, formatThaiDate, formatTimeRange, resolveAttachmentViewUrl } from "@nacc/utils";
+import {
+  formatBytes,
+  formatPhone,
+  formatThaiDate,
+  formatTimeRange,
+  resolveAttachmentViewUrl,
+} from "@nacc/utils";
 import { SecurityJobActions } from "@/components/security-job-actions";
+import { SecurityStatusBadge } from "@/components/security-status-badge";
 import { CompletionPhotoUploader } from "@/components/completion-photo-uploader";
 import { UserAttachmentUploader } from "@/components/user-attachment-uploader";
+import { requireAppMode } from "@/lib/user-guards";
 import { getSignedUrls } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +40,7 @@ export default async function SecurityJobDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { profile } = await requireProfile({ roles: ["security_staff"] });
+  const { profile } = await requireAppMode("security");
   const { id } = await params;
   const supabase = await createServerSupabase();
   const request = await getRequestById(supabase, id);
@@ -63,7 +69,7 @@ export default async function SecurityJobDetailPage({
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <StatusBadge status={request.status} />
+        <SecurityStatusBadge status={request.status} />
         <SecurityJobActions id={id} status={request.status} assignedToMe={assignedToMe} />
       </div>
 
@@ -141,7 +147,7 @@ export default async function SecurityJobDetailPage({
               <div>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-sm font-medium">{TH.entity.completionPhoto}</p>
-                  {assignedToMe && ["assigned", "in_progress"].includes(request.status) ? (
+                  {assignedToMe && request.status === "in_progress" ? (
                     <CompletionPhotoUploader requestId={id} />
                   ) : null}
                 </div>

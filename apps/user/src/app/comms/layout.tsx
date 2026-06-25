@@ -2,17 +2,17 @@ import { requireAppMode } from "@/lib/user-guards";
 import { UserShell } from "@/components/user-shell";
 import { switchRole } from "@/lib/auth-actions";
 
-export default async function OfficerLayout({
+export default async function CommsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireAppMode("officer");
+  const { profile } = await requireAppMode("comms");
 
   return (
     <UserShell
       profile={{ display_name: profile.display_name }}
-      mode="officer"
+      mode="comms"
       switchRole={switchRole}
     >
       {children}

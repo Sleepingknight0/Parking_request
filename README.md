@@ -99,6 +99,14 @@ Run User only:
 pnpm dev:user
 ```
 
+If Admin or User shows **Runtime TypeError** (`Cannot read properties of undefined (reading 'call')`) or a blank error page in dev, the local `.next` cache is usually stale (often after running `pnpm build` while `pnpm dev` is still running). Reset and restart:
+
+```bash
+pnpm dev:reset
+```
+
+Or stop dev, run `pnpm clean:next`, then `pnpm dev` again. **Do not run `pnpm build` while `pnpm dev` is active.**
+
 Checks:
 
 ```bash

@@ -13,6 +13,7 @@ import {
   StatCard,
   PageHeader,
   StatusBadge,
+  StatusLegend,
   Card,
   CardHeader,
   CardTitle,
@@ -28,6 +29,7 @@ import {
 } from "@nacc/ui";
 import {
   TH,
+  ADMIN_STATUS_LEGEND,
   REQUEST_STATUSES,
   type RequestStatus,
   type ParkingRequestListItem,
@@ -130,6 +132,10 @@ export default async function DashboardPage() {
           </Button>
         }
       />
+
+      <div className="mb-6">
+        <StatusLegend statuses={ADMIN_STATUS_LEGEND} />
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={TH.dashboard.totalRequests} value={all.length} icon={<FileText className="h-5 w-5" />} />

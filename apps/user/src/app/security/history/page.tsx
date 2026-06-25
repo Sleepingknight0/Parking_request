@@ -3,7 +3,6 @@ import {
   Button,
   EmptyState,
   PageHeader,
-  StatusBadge,
   Table,
   TableBody,
   TableCell,
@@ -12,15 +11,16 @@ import {
   TableRow,
 } from "@nacc/ui";
 import { TH, type ParkingRequestListItem } from "@nacc/types";
-import { requireProfile } from "@nacc/auth/guards";
 import { createServerSupabase } from "@nacc/db/server";
 import { REQUEST_LIST_SELECT } from "@nacc/db/queries";
 import { formatThaiDate } from "@nacc/utils";
+import { requireAppMode } from "@/lib/user-guards";
+import { SecurityStatusBadge } from "@/components/security-status-badge";
 
 export const dynamic = "force-dynamic";
 
 export default async function SecurityHistoryPage() {
-  const { profile } = await requireProfile({ roles: ["security_staff"] });
+  const { profile } = await requireAppMode("security");
   const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("parking_requests")
@@ -53,7 +53,7 @@ export default async function SecurityHistoryPage() {
                   <TableCell>{job.department?.name_th ?? "-"}</TableCell>
                   <TableCell>{formatThaiDate(job.request_dates[0]?.request_date)}</TableCell>
                   <TableCell>
-                    <StatusBadge status={job.status} />
+                    <SecurityStatusBadge status={job.status} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Button asChild variant="outline" size="sm">

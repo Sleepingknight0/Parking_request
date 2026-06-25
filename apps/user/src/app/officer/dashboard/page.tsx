@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText, Inbox, Plus, Send } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, PageHeader, StatCard, StatusBadge } from "@nacc/ui";
-import { TH, type ParkingRequestListItem } from "@nacc/types";
+import { Button, Card, CardContent, CardHeader, CardTitle, PageHeader, StatCard, StatusBadge, StatusLegend } from "@nacc/ui";
+import { OFFICER_STATUS_LEGEND, TH, type ParkingRequestListItem } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
 import { listRequests } from "@nacc/db/queries";
 import { formatThaiDate } from "@nacc/utils";
@@ -30,6 +30,13 @@ export default async function OfficerDashboardPage() {
           </Button>
         }
       />
+
+      <div className="mb-6">
+        <StatusLegend
+          statuses={OFFICER_STATUS_LEGEND}
+          description="สีช่วยให้จำได้ว่าคำขอของคุณอยู่ขั้นตอนไหน"
+        />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="แบบร่าง" value={drafts} icon={<FileText className="h-5 w-5" />} />

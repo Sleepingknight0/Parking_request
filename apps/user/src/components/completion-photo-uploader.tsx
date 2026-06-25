@@ -15,7 +15,13 @@ type PendingItem = {
   compressedSize: number;
 };
 
-export function CompletionPhotoUploader({ requestId }: { requestId: string }) {
+export function CompletionPhotoUploader({
+  requestId,
+  large = false,
+}: {
+  requestId: string;
+  large?: boolean;
+}) {
   const router = useRouter();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [pending, setPending] = React.useState(false);
@@ -82,9 +88,9 @@ export function CompletionPhotoUploader({ requestId }: { requestId: string }) {
       />
       <Button
         type="button"
-        variant="outline"
-        size="sm"
-        className="gap-2"
+        variant={large ? "default" : "outline"}
+        size={large ? "lg" : "sm"}
+        className={large ? "h-14 w-full gap-3 text-lg" : "gap-2"}
         disabled={pending}
         onClick={() => inputRef.current?.click()}
       >

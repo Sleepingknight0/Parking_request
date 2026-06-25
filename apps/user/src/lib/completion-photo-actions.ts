@@ -67,7 +67,7 @@ async function assertSecurityCanUploadCompletion(
   if (request.assigned_to !== profileId) {
     return { ok: false, error: "คุณไม่มีสิทธิ์แนบรูปส่งงานสำหรับงานนี้" };
   }
-  if (!["assigned", "in_progress"].includes(request.status)) {
+  if (request.status !== "in_progress") {
     return { ok: false, error: "แนบรูปส่งงานได้เฉพาะงานที่กำลังดำเนินการ" };
   }
   return { ok: true, requestNo: request.request_no };
@@ -165,7 +165,7 @@ export async function completeJobWithPhotos(
   if (request.assigned_to !== profile.id) {
     return { ok: false, error: "คุณไม่มีสิทธิ์ปิดงานนี้" };
   }
-  if (!["assigned", "in_progress"].includes(request.status)) {
+  if (request.status !== "in_progress") {
     return { ok: false, error: "ไม่สามารถปิดงานในสถานะนี้ได้" };
   }
 
@@ -179,7 +179,7 @@ export async function completeJobWithPhotos(
     return { ok: false, error: TH.action.requireCompletionPhoto };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("parking_requests")
     .update({
       status: "completed",
@@ -187,9 +187,13 @@ export async function completeJobWithPhotos(
       completed_by: profile.id,
     })
     .eq("id", id)
-    .eq("assigned_to", profile.id);
+    .eq("assigned_to", profile.id)
+    .eq("status", "in_progress")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "ปิดงานได้เฉพาะงานที่กำลังดำเนินการเท่านั้น" };
 
   await logActivity("request.complete", id, profile.id, { app: "user" });
   revalidateUserRequest(id);

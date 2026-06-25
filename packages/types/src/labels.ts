@@ -70,6 +70,15 @@ export const TH = {
     back: "ย้อนกลับ",
     save: "บันทึก",
   },
+  security: {
+    acknowledge: "รับทราบ",
+    acknowledgeJob: "รับทราบงานนี้",
+    acknowledged: "รับทราบแล้ว พร้อมดำเนินการ",
+    startArranging: "เริ่มจัดที่จอด",
+    submitWork: "ส่งงาน",
+    confirmSubmitWork: "ยืนยันส่งงาน",
+    workDone: "ทำงานเรียบร้อยแล้ว",
+  },
   nav: {
     dashboard: "แดชบอร์ด",
     requests: "คำขอที่จอดรถ",

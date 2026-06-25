@@ -26,6 +26,8 @@ export interface ActionResult {
 function revalidateUserRequest(id?: string) {
   revalidatePath("/officer/dashboard");
   revalidatePath("/officer/requests");
+  revalidatePath("/comms/dashboard");
+  revalidatePath("/comms/requests");
   revalidatePath("/security/dashboard");
   revalidatePath("/security/jobs");
   revalidatePath("/security/history");
@@ -224,7 +226,7 @@ export async function cancelOfficerRequest(
 export async function acceptJob(id: string): Promise<ActionResult> {
   const { profile } = await requireProfile({ roles: ["security_staff"] });
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("parking_requests")
     .update({
       status: "assigned",
@@ -233,24 +235,38 @@ export async function acceptJob(id: string): Promise<ActionResult> {
       assigned_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "งานนี้มีผู้รับแล้วหรือสถานะเปลี่ยนไปแล้ว" };
   await logActivity("request.assign", id, profile.id, { app: "user", accepted_by_security: true });
   revalidateUserRequest(id);
   return { ok: true, id };
 }
 
+/** Accept approved job and move straight to in_progress (one tap for security staff). */
+export async function acceptJobAndStart(id: string): Promise<ActionResult> {
+  const accepted = await acceptJob(id);
+  if (!accepted.ok) return accepted;
+  return startJob(id);
+}
+
 export async function startJob(id: string): Promise<ActionResult> {
   const { profile } = await requireProfile({ roles: ["security_staff"] });
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("parking_requests")
     .update({ status: "in_progress" })
     .eq("id", id)
-    .eq("assigned_to", profile.id);
+    .eq("assigned_to", profile.id)
+    .eq("status", "assigned")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "เริ่มงานได้เฉพาะงานที่รับแล้วเท่านั้น" };
   await logActivity("request.status_change", id, profile.id, { app: "user", to: "in_progress" });
   revalidateUserRequest(id);
   return { ok: true, id };
@@ -265,16 +281,21 @@ export async function cancelJob(id: string, reason: string): Promise<ActionResul
   if (!reason.trim()) return { ok: false, error: "กรุณาระบุเหตุผลการยกเลิก" };
 
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("parking_requests")
     .update({
       status: "cancelled",
       cancellation_reason: reason.trim(),
       cancelled_by: profile.id,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("assigned_to", profile.id)
+    .in("status", ["assigned", "in_progress"])
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "ยกเลิกได้เฉพาะงานที่คุณรับผิดชอบอยู่เท่านั้น" };
   await logActivity("request.cancel", id, profile.id, { app: "user", reason });
   revalidateUserRequest(id);
   return { ok: true, id };

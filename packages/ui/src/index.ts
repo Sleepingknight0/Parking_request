@@ -15,6 +15,7 @@ export * from "./components/table";
 export * from "./components/tabs";
 export * from "./components/avatar";
 export * from "./components/status-badge";
+export * from "./components/status-legend";
 export * from "./components/states";
 export * from "./components/sonner";
 export * from "./components/login-card";
