@@ -40,17 +40,34 @@ export function formatThaiDateTime(value: DateInput, era: Era = "be"): string {
   return d.format(era === "be" ? "DD/MM/BBBB HH:mm" : "DD/MM/YYYY HH:mm");
 }
 
-/** "08:30 - 12:00", "08:30 น." or "-" depending on which times exist. */
+/** "09.00 – 12.00 น." (24-hour Thai style, no AM/PM). */
 export function formatTimeRange(
   start?: string | null,
   end?: string | null,
 ): string {
   const s = normalizeTime(start);
   const e = normalizeTime(end);
-  if (s && e) return `${s} - ${e}`;
-  if (s) return `${s} น.`;
-  if (e) return `ถึง ${e} น.`;
+  if (s && e) return `${toThaiTimeToken(s)} – ${toThaiTimeToken(e)} น.`;
+  if (s) return `${toThaiTimeToken(s)} น.`;
+  if (e) return `ถึง ${toThaiTimeToken(e)} น.`;
   return "-";
+}
+
+/** Single time token "14.30" (24-hour, Thai dot style). */
+export function formatTimeThDot(value?: string | null): string {
+  const t = normalizeTime(value);
+  if (!t) return "";
+  return toThaiTimeToken(t);
+}
+
+/** Single time for UI: "14.30 น." */
+export function formatTimeTh(value?: string | null): string {
+  const token = formatTimeThDot(value);
+  return token ? `${token} น.` : "";
+}
+
+function toThaiTimeToken(hhmm: string): string {
+  return hhmm.replace(":", ".");
 }
 
 function normalizeTime(t?: string | null): string | null {
@@ -68,9 +85,31 @@ export function toISODate(value: DateInput): string | null {
   return d.isValid() ? d.format("YYYY-MM-DD") : null;
 }
 
+/** Add calendar days to an ISO date string. */
+export function addDaysIso(iso: string, days: number): string {
+  return dayjs(iso).add(days, "day").format("YYYY-MM-DD");
+}
+
 /** Today as ISO yyyy-mm-dd. */
 export function todayISO(): string {
   return dayjs().format("YYYY-MM-DD");
+}
+
+/** ISO date (YYYY-MM-DD) of the Monday that starts the week containing `iso`. */
+export function weekStartIso(iso: string): string {
+  const dt = dayjs(iso);
+  const offset = (dt.day() + 6) % 7; // Mon=0 … Sun=6
+  return dt.subtract(offset, "day").format("YYYY-MM-DD");
+}
+
+/** First day of the month containing `iso`. */
+export function monthStartIso(iso: string): string {
+  return dayjs(iso).startOf("month").format("YYYY-MM-DD");
+}
+
+/** First day of the year containing `iso`. */
+export function yearStartIso(iso: string): string {
+  return dayjs(iso).startOf("year").format("YYYY-MM-DD");
 }
 
 /** Days in [start, end] inclusive as ISO strings (for date-range patterns). */

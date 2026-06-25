@@ -18,6 +18,7 @@ import {
   type FileType,
   type ActivityAction,
 } from "@nacc/types";
+import { sanitizeStorageFilename } from "@nacc/utils";
 
 export interface ActionResult {
   ok: boolean;
@@ -243,39 +244,13 @@ export async function rejectRequest(id: string, reason?: string): Promise<Action
 }
 
 export async function assignRequest(
-  id: string,
-  assignedTo: string,
+  _id: string,
+  _assignedTo: string,
 ): Promise<ActionResult> {
-  const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
-  const supabase = await createServerSupabase();
-
-  const { data: current } = await supabase
-    .from("parking_requests")
-    .select("status")
-    .eq("id", id)
-    .single();
-
-  const patch: Record<string, unknown> = {
-    assigned_to: assignedTo,
-    assigned_by: profile.id,
-    assigned_at: new Date().toISOString(),
+  return {
+    ok: false,
+    error: "การมอบหมายงานทำโดยพนักงาน รปภ. รับทราบเองในแอปผู้ใช้",
   };
-  if (current?.status === "approved") patch.status = "assigned";
-
-  const { error } = await supabase.from("parking_requests").update(patch).eq("id", id);
-  if (error) return { ok: false, error: error.message };
-
-  await logActivity(
-    current?.status === "approved" ? "request.assign" : "request.reassign",
-    id,
-    profile.id,
-    { assigned_to: assignedTo },
-  );
-  revalidatePath(`/requests/${id}`);
-  revalidatePath("/requests");
-  revalidatePath("/assignments");
-  void syncRequestToSheet(id);
-  return { ok: true, id };
 }
 
 /** Generic status move for valid transitions (for example assigned -> in_progress). */
@@ -379,7 +354,7 @@ export async function uploadAttachment(
     return { ok: false, error: "ชนิดไฟล์ไม่รองรับ (PDF, JPG, PNG, WebP, DOC, DOCX)" };
   }
 
-  const safeName = file.name.replace(/[^\w.\-ก-๙]+/g, "_");
+  const safeName = sanitizeStorageFilename(file.name);
   const path = `${FILE_TYPE_FOLDER[fileType]}/${requestId}/${Date.now()}-${safeName}`;
 
   const svc = createServiceClient();

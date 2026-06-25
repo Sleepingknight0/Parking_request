@@ -10,6 +10,8 @@ import {
   CardTitle,
   CardContent,
   Input,
+  ThaiDateInput,
+  ThaiTimeInput,
   Textarea,
   Label,
   Button,
@@ -59,6 +61,7 @@ interface PlateEntry {
 }
 
 const WEEKDAYS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+const SELECT_NONE = "__none__";
 
 export interface RequestFormInitial extends Partial<Scalars> {
   date_pattern?: DatePattern;
@@ -103,14 +106,16 @@ export function RequestForm({
 
   const { register, control, handleSubmit } = useForm<Scalars>({
     defaultValues: {
-      department_id: initial?.department_id ?? "",
+      department_id: initial?.department_id ? initial.department_id : SELECT_NONE,
       official_letter_no: initial?.official_letter_no ?? "",
       official_letter_date: initial?.official_letter_date ?? "",
       received_date: initial?.received_date ?? todayISO(),
       subject: initial?.subject ?? "",
       contact_name: initial?.contact_name ?? "",
       contact_phone: initial?.contact_phone ?? "",
-      requested_location_id: initial?.requested_location_id ?? "",
+      requested_location_id: initial?.requested_location_id
+        ? initial.requested_location_id
+        : SELECT_NONE,
       requested_location_text: initial?.requested_location_text ?? "",
       cars_count: initial?.cars_count ?? 1,
       purpose: initial?.purpose ?? "",
@@ -139,6 +144,9 @@ export function RequestForm({
   function assemble(values: Scalars): RequestFormInput {
     return {
       ...values,
+      department_id: values.department_id === SELECT_NONE ? "" : values.department_id,
+      requested_location_id:
+        values.requested_location_id === SELECT_NONE ? "" : values.requested_location_id,
       cars_count: Number(values.cars_count),
       date_pattern: pattern,
       dates: buildDates(),
@@ -190,7 +198,10 @@ export function RequestForm({
               control={control}
               name="department_id"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
                   <SelectTrigger><SelectValue placeholder="เลือกสำนัก/หน่วยงาน" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {departments.map((d) => (
@@ -205,10 +216,22 @@ export function RequestForm({
             <Input {...register("official_letter_no")} placeholder="เช่น ปช 0001/2569" />
           </Field>
           <Field label={TH.entity.letterDate}>
-            <Input type="date" {...register("official_letter_date")} />
+            <Controller
+              control={control}
+              name="official_letter_date"
+              render={({ field }) => (
+                <ThaiDateInput value={field.value ?? ""} onChange={field.onChange} />
+              )}
+            />
           </Field>
           <Field label={TH.entity.receivedDate}>
-            <Input type="date" {...register("received_date")} />
+            <Controller
+              control={control}
+              name="received_date"
+              render={({ field }) => (
+                <ThaiDateInput value={field.value ?? ""} onChange={field.onChange} />
+              )}
+            />
           </Field>
           <Field label={TH.entity.subject} className="sm:col-span-2">
             <Input {...register("subject")} placeholder="เรื่องที่ขอใช้ที่จอดรถ" />
@@ -230,9 +253,13 @@ export function RequestForm({
               control={control}
               name="requested_location_id"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
                   <SelectTrigger><SelectValue placeholder="เลือกสถานที่" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={SELECT_NONE}>ไม่ระบุ</SelectItem>
                     {locations.map((l) => (
                       <SelectItem key={l.id} value={l.id}>{l.name_th}</SelectItem>
                     ))}
@@ -282,7 +309,7 @@ export function RequestForm({
 
           {pattern === "single" && (
             <Field label="วันที่">
-              <Input type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} className="sm:w-60" />
+              <ThaiDateInput value={singleDate} onChange={setSingleDate} className="sm:w-60" />
             </Field>
           )}
 
@@ -290,11 +317,10 @@ export function RequestForm({
             <div className="space-y-2">
               {multiDates.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Input
-                    type="date"
+                  <ThaiDateInput
                     value={d.request_date}
-                    onChange={(e) =>
-                      setMultiDates((prev) => prev.map((x, j) => (j === i ? { request_date: e.target.value } : x)))
+                    onChange={(value) =>
+                      setMultiDates((prev) => prev.map((x, j) => (j === i ? { request_date: value } : x)))
                     }
                     className="sm:w-60"
                   />
@@ -313,8 +339,8 @@ export function RequestForm({
 
           {(pattern === "range" || pattern === "weekly") && (
             <div className="flex flex-wrap gap-4">
-              <Field label="ตั้งแต่วันที่"><Input type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} className="sm:w-48" /></Field>
-              <Field label="ถึงวันที่"><Input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className="sm:w-48" /></Field>
+              <Field label="ตั้งแต่วันที่"><ThaiDateInput value={rangeStart} onChange={setRangeStart} className="sm:w-48" /></Field>
+              <Field label="ถึงวันที่"><ThaiDateInput value={rangeEnd} onChange={setRangeEnd} className="sm:w-48" /></Field>
             </div>
           )}
 
@@ -333,9 +359,16 @@ export function RequestForm({
           )}
 
           <div className="flex flex-wrap gap-4">
-            <Field label={TH.entity.startTime}><Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="sm:w-40" /></Field>
-            <Field label={TH.entity.endTime}><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="sm:w-40" /></Field>
+            <Field label={TH.entity.startTime}>
+              <ThaiTimeInput value={startTime} onChange={setStartTime} />
+            </Field>
+            <Field label={TH.entity.endTime}>
+              <ThaiTimeInput value={endTime} onChange={setEndTime} />
+            </Field>
           </div>
+          <p className="text-xs text-muted-foreground">
+            เวลาแบบ 24 ชั่วโมง (เช่น 14.30 น.) ไม่ใช้ AM/PM
+          </p>
         </CardContent>
       </Card>
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download, FileText, ImageIcon, Paperclip, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import {
+  AttachmentPreviewSection,
   Button,
   Card,
   CardContent,
@@ -18,9 +19,9 @@ import {
   type Attachment,
   type FileType,
 } from "@nacc/types";
-import { createServerSupabase } from "@nacc/db/server";
+import { getUserAppDb } from "@/lib/user-db";
 import { getRequestById } from "@nacc/db/queries";
-import { formatBytes, formatPhone, formatThaiDate, formatTimeRange, resolveAttachmentViewUrl } from "@nacc/utils";
+import { formatPhone, formatThaiDate, formatTimeRange } from "@nacc/utils";
 import { OfficerRequestActions } from "@/components/officer-request-actions";
 import { UserAttachmentUploader } from "@/components/user-attachment-uploader";
 import { getSignedUrls } from "@/lib/storage";
@@ -33,7 +34,7 @@ export default async function OfficerRequestDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createServerSupabase();
+  const supabase = getUserAppDb();
   const request = await getRequestById(supabase, id);
   if (!request) notFound();
 
@@ -139,17 +140,24 @@ export default async function OfficerRequestDetailPage({
               <CardTitle className="text-base">{TH.entity.attachment}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <AttachGroup
-                type="official_letter"
+              <AttachmentPreviewSection
+                label={FILE_TYPE_LABELS_TH.official_letter}
                 items={grouped("official_letter")}
-                signed={signed}
-                upload={<UserAttachmentUploader requestId={id} fileType="official_letter" label="แนบหนังสือราชการ" />}
+                signedSupabaseUrls={signed}
+                emptyMessage="ยังไม่แนบหนังสือราชการ — แตะการ์ดเพื่อดูตัวอย่างเมื่อมีไฟล์"
+                upload={
+                  <UserAttachmentUploader
+                    requestId={id}
+                    fileType="official_letter"
+                    label="แนบหนังสือราชการ"
+                  />
+                }
               />
               <Separator />
-              <AttachGroup
-                type="general_attachment"
+              <AttachmentPreviewSection
+                label={FILE_TYPE_LABELS_TH.general_attachment}
                 items={grouped("general_attachment")}
-                signed={signed}
+                signedSupabaseUrls={signed}
                 upload={<UserAttachmentUploader requestId={id} fileType="general_attachment" />}
               />
               <Separator />
@@ -158,7 +166,11 @@ export default async function OfficerRequestDetailPage({
                 <CompletionPhotoGallery items={grouped("completion_photo")} signedSupabaseUrls={signed} />
               </div>
               <Separator />
-              <AttachGroup type="cancellation_evidence" items={grouped("cancellation_evidence")} signed={signed} />
+              <AttachmentPreviewSection
+                label={FILE_TYPE_LABELS_TH.cancellation_evidence}
+                items={grouped("cancellation_evidence")}
+                signedSupabaseUrls={signed}
+              />
             </CardContent>
           </Card>
         </div>
@@ -193,55 +205,6 @@ function Info({
     <div className={className}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-medium">{value || "-"}</p>
-    </div>
-  );
-}
-
-function AttachGroup({
-  type,
-  items,
-  signed,
-  upload,
-}: {
-  type: FileType;
-  items: Attachment[];
-  signed: Record<string, string>;
-  upload?: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH[type]}</p>
-        {upload}
-      </div>
-      {items.length ? (
-        <ul className="space-y-1.5">
-          {items.map((attachment) => {
-            const url = resolveAttachmentViewUrl(attachment, signed);
-            const isImage = attachment.mime_type?.startsWith("image/");
-            return (
-              <li key={attachment.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  {isImage ? <ImageIcon className="h-4 w-4 text-muted-foreground" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
-                  <span className="truncate">{attachment.file_name}</span>
-                  <span className="text-xs text-muted-foreground">{formatBytes(attachment.file_size)}</span>
-                </span>
-                {url ? (
-                  <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                    <Download className="h-4 w-4" />
-                    เปิด
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Paperclip className="h-3.5 w-3.5" />
-          ยังไม่มีไฟล์
-        </p>
-      )}
     </div>
   );
 }

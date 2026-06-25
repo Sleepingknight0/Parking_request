@@ -1,79 +1,33 @@
-import Link from "next/link";
-import {
-  Button,
-  EmptyState,
-  PageHeader,
-  StatusBadge,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@nacc/ui";
-import { TH, type ParkingRequestListItem } from "@nacc/types";
-import { createServerSupabase } from "@nacc/db/server";
+import { PageHeader } from "@nacc/ui";
+import { TH } from "@nacc/types";
+import { getUserAppDb } from "@/lib/user-db";
 import { REQUEST_LIST_SELECT } from "@nacc/db/queries";
-import { formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { requireAppMode } from "@/lib/user-guards";
+import type { SecurityJobRow } from "@/lib/security-job-utils";
+import { SecurityJobsList } from "@/components/security-jobs-list";
 
 export const dynamic = "force-dynamic";
 
+const JOB_LIST_SELECT = `${REQUEST_LIST_SELECT}, request_license_plates(plate_no,vehicle_note)`;
+
 export default async function SecurityJobsPage() {
-  const supabase = await createServerSupabase();
+  const { profile } = await requireAppMode("security");
+  const supabase = getUserAppDb();
   const { data } = await supabase
     .from("parking_requests")
-    .select(REQUEST_LIST_SELECT)
-    .in("status", ["approved", "assigned", "in_progress", "completed", "cancelled"])
+    .select(JOB_LIST_SELECT)
+    .in("status", ["approved", "assigned", "in_progress"])
     .order("created_at", { ascending: false })
     .limit(300);
-  const jobs = (data ?? []) as unknown as ParkingRequestListItem[];
+  const jobs = (data ?? []) as unknown as SecurityJobRow[];
 
   return (
     <>
-      <PageHeader title={TH.nav.jobs} description="รายการงานคำขอที่จอดรถทั้งหมดที่เกี่ยวข้องกับ รปภ." />
-      {jobs.length ? (
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{TH.entity.officialLetterNo}</TableHead>
-                <TableHead>{TH.entity.department}</TableHead>
-                <TableHead>{TH.entity.requestedDate}</TableHead>
-                <TableHead>{TH.entity.requestedLocation}</TableHead>
-                <TableHead>{TH.entity.status}</TableHead>
-                <TableHead className="text-right">{TH.action.viewDetail}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {jobs.map((job) => {
-                const firstDate = job.request_dates[0];
-                return (
-                  <TableRow key={job.id}>
-                    <TableCell className="font-medium">{job.official_letter_no}</TableCell>
-                    <TableCell>{job.department?.name_th ?? "-"}</TableCell>
-                    <TableCell>
-                      {firstDate
-                        ? `${formatThaiDate(firstDate.request_date)} ${formatTimeRange(firstDate.start_time, firstDate.end_time)}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>{job.requested_location?.name_th ?? job.requested_location_text ?? "-"}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={job.status} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/security/jobs/${job.id}`}>{TH.action.viewDetail}</Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState title="ยังไม่มีงาน" description="เมื่องานใหม่ถูกส่งเข้าระบบ รายการจะแสดงที่นี่" />
-      )}
+      <PageHeader
+        title={TH.nav.jobs}
+        description="ค้นหางาน กรองตามวันที่หรือสำนัก แล้วแตะเพื่อดูรายละเอียด"
+      />
+      <SecurityJobsList jobs={jobs} profileId={profile.id} />
     </>
   );
 }

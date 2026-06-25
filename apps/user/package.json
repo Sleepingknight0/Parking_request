@@ -7,16 +7,22 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/lib/security-job-utils.test.ts"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/react": "^6.1.21",
+    "@fullcalendar/timegrid": "^6.1.21",
+    "@hookform/resolvers": "^3.10.0",
     "@nacc/auth": "workspace:*",
     "@nacc/db": "workspace:*",
     "@nacc/storage": "workspace:*",
     "@nacc/types": "workspace:*",
     "@nacc/ui": "workspace:*",
     "@nacc/utils": "workspace:*",
-    "@hookform/resolvers": "^3.10.0",
     "@supabase/supabase-js": "^2.47.10",
     "browser-image-compression": "^2.0.2",
     "dayjs": "^1.11.13",
@@ -38,6 +44,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }

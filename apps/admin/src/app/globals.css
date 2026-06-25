@@ -79,3 +79,37 @@
   border: none;
   font-size: 0.75rem;
 }
+
+/* ─── Print / official-document styles ─────────────────────────────────────── */
+.official-doc,
+.official-doc * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .official-doc {
+    font-size: 12px;
+  }
+  /* Keep table rows from splitting awkwardly across pages */
+  .official-doc table {
+    page-break-inside: auto;
+  }
+  .official-doc tr {
+    page-break-inside: avoid;
+  }
+  .official-doc thead {
+    display: table-header-group;
+  }
+}

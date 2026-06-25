@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
-import { Loader2, Plus, Save, Send, Trash2 } from "lucide-react";
+import { FileText, Loader2, Paperclip, Plus, Save, Send, Trash2, Upload, X } from "lucide-react";
 import {
   Button,
   Card,
@@ -11,6 +11,8 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  ThaiDateInput,
+  ThaiTimeInput,
   Label,
   Select,
   SelectContent,
@@ -30,7 +32,12 @@ import {
   type RequestFormInput,
 } from "@nacc/types";
 import { expandDateRange, todayISO } from "@nacc/utils";
-import { createOfficerRequest, updateOfficerRequest } from "@/lib/request-actions";
+import {
+  createOfficerRequest,
+  updateOfficerRequest,
+  uploadUserAttachment,
+} from "@/lib/request-actions";
+import { createCommsRequest, uploadCommsAttachment } from "@/lib/comms-actions";
 
 type Scalars = {
   department_id: string;
@@ -61,17 +68,23 @@ const WEEKDAYS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
 export function OfficerRequestForm({
   mode,
+  variant = "officer",
   requestId,
   departments,
   locations,
   initial,
+  existingOfficialLetterCount = 0,
 }: {
   mode: "create" | "edit";
+  variant?: "officer" | "comms";
   requestId?: string;
   departments: { id: string; name_th: string }[];
   locations: { id: string; name_th: string }[];
   initial?: OfficerRequestInitial;
+  existingOfficialLetterCount?: number;
 }) {
+  const isComms = variant === "comms";
+  const detailPath = isComms ? "/comms/requests" : "/officer/requests";
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [pattern, setPattern] = React.useState<DatePattern>(initial?.date_pattern ?? "single");
@@ -92,6 +105,8 @@ export function OfficerRequestForm({
       ? initial.plates.map((p) => ({ plate_no: p.plate_no, vehicle_note: p.vehicle_note ?? "" }))
       : [{ plate_no: "", vehicle_note: "" }],
   );
+  const [officialFiles, setOfficialFiles] = React.useState<File[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { register, control, handleSubmit } = useForm<Scalars>({
     defaultValues: {
@@ -148,6 +163,10 @@ export function OfficerRequestForm({
       return;
     }
     if (submit) {
+      if (existingOfficialLetterCount === 0 && officialFiles.length === 0) {
+        toast.error("กรุณาแนบรูปหรือไฟล์ PDF ของหนังสือราชการก่อนส่งคำขอ");
+        return;
+      }
       const errors = validateForSubmit(parsed.data);
       if (errors.length) {
         toast.error(errors[0]);
@@ -157,16 +176,47 @@ export function OfficerRequestForm({
 
     setPending(true);
     try {
-      const res =
-        mode === "create"
-          ? await createOfficerRequest(input, submit)
-          : await updateOfficerRequest(requestId!, input, submit);
+      let res;
+      if (isComms) {
+        if (mode === "edit") {
+          toast.error("ยังไม่รองรับแก้ไขคำขอในโหมดสื่อสาร");
+          return;
+        }
+        res = await createCommsRequest(input, submit);
+      } else {
+        res =
+          mode === "create"
+            ? await createOfficerRequest(input, submit)
+            : await updateOfficerRequest(requestId!, input, submit);
+      }
       if (!res.ok) {
         toast.error(res.error ?? "บันทึกไม่สำเร็จ");
         return;
       }
-      toast.success(submit ? "ส่งคำขอแล้ว" : TH.state.saved);
-      router.push(`/officer/requests/${res.id}`);
+
+      if (officialFiles.length > 0 && res.id) {
+        const uploadFn = isComms ? uploadCommsAttachment : uploadUserAttachment;
+        for (const file of officialFiles) {
+          const fd = new FormData();
+          fd.set("file", file);
+          const upload = await uploadFn(res.id, "official_letter", fd);
+          if (!upload.ok) {
+            toast.error(upload.error ?? "บันทึกข้อมูลแล้ว แต่แนบไฟล์หนังสือไม่สำเร็จ");
+            router.push(`${detailPath}/${res.id}`);
+            router.refresh();
+            return;
+          }
+        }
+      }
+
+      toast.success(
+        submit
+          ? isComms
+            ? TH.comms.recordSuccess
+            : "ส่งคำขอแล้ว"
+          : TH.state.saved,
+      );
+      router.push(`${detailPath}/${res.id}`);
       router.refresh();
     } finally {
       setPending(false);
@@ -204,10 +254,22 @@ export function OfficerRequestForm({
             <Input {...register("official_letter_no")} placeholder="เช่น ปช 0001/2569" />
           </Field>
           <Field label={TH.entity.letterDate}>
-            <Input type="date" {...register("official_letter_date")} />
+            <Controller
+              control={control}
+              name="official_letter_date"
+              render={({ field }) => (
+                <ThaiDateInput value={field.value ?? ""} onChange={field.onChange} />
+              )}
+            />
           </Field>
           <Field label={TH.entity.receivedDate}>
-            <Input type="date" {...register("received_date")} />
+            <Controller
+              control={control}
+              name="received_date"
+              render={({ field }) => (
+                <ThaiDateInput value={field.value ?? ""} onChange={field.onChange} />
+              )}
+            />
           </Field>
           <Field label={TH.entity.subject} className="sm:col-span-2">
             <Input {...register("subject")} />
@@ -280,10 +342,9 @@ export function OfficerRequestForm({
 
           {pattern === "single" ? (
             <Field label="วันที่">
-              <Input
-                type="date"
+              <ThaiDateInput
                 value={singleDate}
-                onChange={(e) => setSingleDate(e.target.value)}
+                onChange={setSingleDate}
                 className="sm:w-60"
               />
             </Field>
@@ -293,12 +354,11 @@ export function OfficerRequestForm({
             <div className="space-y-2">
               {multiDates.map((date, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <Input
-                    type="date"
+                  <ThaiDateInput
                     value={date.request_date}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setMultiDates((prev) =>
-                        prev.map((d, i) => (i === index ? { request_date: e.target.value } : d)),
+                        prev.map((d, i) => (i === index ? { request_date: value } : d)),
                       )
                     }
                     className="sm:w-60"
@@ -329,18 +389,16 @@ export function OfficerRequestForm({
           {pattern === "range" || pattern === "weekly" ? (
             <div className="flex flex-wrap gap-4">
               <Field label="ตั้งแต่วันที่">
-                <Input
-                  type="date"
+                <ThaiDateInput
                   value={rangeStart}
-                  onChange={(e) => setRangeStart(e.target.value)}
+                  onChange={setRangeStart}
                   className="sm:w-48"
                 />
               </Field>
               <Field label="ถึงวันที่">
-                <Input
-                  type="date"
+                <ThaiDateInput
                   value={rangeEnd}
-                  onChange={(e) => setRangeEnd(e.target.value)}
+                  onChange={setRangeEnd}
                   className="sm:w-48"
                 />
               </Field>
@@ -376,22 +434,15 @@ export function OfficerRequestForm({
 
           <div className="flex flex-wrap gap-4">
             <Field label={TH.entity.startTime}>
-              <Input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="sm:w-40"
-              />
+              <ThaiTimeInput value={startTime} onChange={setStartTime} />
             </Field>
             <Field label={TH.entity.endTime}>
-              <Input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="sm:w-40"
-              />
+              <ThaiTimeInput value={endTime} onChange={setEndTime} />
             </Field>
           </div>
+          <p className="text-xs text-muted-foreground">
+            เวลาแบบ 24 ชั่วโมง (เช่น 14.30 น.) ไม่ใช้ AM/PM
+          </p>
         </CardContent>
       </Card>
 
@@ -445,17 +496,101 @@ export function OfficerRequestForm({
         </CardContent>
       </Card>
 
+      <Card className="border-blue-200 bg-blue-50/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Paperclip className="h-4 w-4 text-blue-700" />
+            แนบรูปหรือไฟล์หนังสือราชการ
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-slate-700">
+            {isComms
+              ? TH.comms.recordHint
+              : "แนบรูปถ่ายหนังสือหรือไฟล์ PDF/DOC เพื่อให้ฝ่ายสื่อสารตรวจสอบที่มาของคำขอได้"}
+          </p>
+          {existingOfficialLetterCount > 0 ? (
+            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              มีไฟล์หนังสือราชการแนบอยู่แล้ว {existingOfficialLetterCount} ไฟล์
+            </p>
+          ) : null}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+            multiple
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? []);
+              setOfficialFiles((prev) => [...prev, ...files]);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2 bg-white"
+              disabled={pending}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              เลือกไฟล์หนังสือ
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              รองรับ PDF, JPG, PNG, WebP, DOC, DOCX
+            </span>
+          </div>
+
+          {officialFiles.length ? (
+            <ul className="space-y-2">
+              {officialFiles.map((file, index) => (
+                <li
+                  key={`${file.name}-${file.size}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{file.name}</span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={pending}
+                    onClick={() =>
+                      setOfficialFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index))
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {isComms
+                ? "ต้องแนบไฟล์หนังสือราชการก่อนบันทึกและส่งให้ รปภ."
+                : "ถ้ากดส่งคำขอ ระบบจะบังคับให้แนบไฟล์หนังสือราชการอย่างน้อย 1 ไฟล์"}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex flex-wrap gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={pending}
-          onClick={handleSubmit((values) => onSave(values, false))}
-          className="gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {TH.action.saveDraft}
-        </Button>
+        {!isComms ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={handleSubmit((values) => onSave(values, false))}
+            className="gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {TH.action.saveDraft}
+          </Button>
+        ) : null}
         <Button
           type="button"
           disabled={pending}
@@ -463,7 +598,7 @@ export function OfficerRequestForm({
           className="gap-2"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {TH.action.submit}
+          {isComms ? TH.comms.recordAndSend : TH.action.submit}
         </Button>
       </div>
     </form>

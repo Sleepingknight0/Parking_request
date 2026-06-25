@@ -1,48 +1,41 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import {
-  FileText,
-  Clock,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  Car,
-  Inbox,
-  UserX,
-} from "lucide-react";
-import {
-  StatCard,
   PageHeader,
-  StatusBadge,
+  StatusLegend,
   Card,
   CardHeader,
   CardTitle,
   CardContent,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
   Button,
   EmptyState,
 } from "@nacc/ui";
 import {
   TH,
+  ADMIN_STATUS_LEGEND,
   REQUEST_STATUSES,
   type RequestStatus,
   type ParkingRequestListItem,
 } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
+import { requireProfile } from "@nacc/auth/guards";
 import { listRequests } from "@nacc/db/queries";
 import { formatThaiDate } from "@nacc/utils";
-import { RealtimeRefresh } from "@/components/realtime-refresh";
 import {
   StatusBarChart,
   DeptBarChart,
   CarsByDateChart,
+  PeriodTrendChart,
   type StatusDatum,
   type NamedDatum,
 } from "@/components/charts";
+import { AdminDashboardContent } from "@/components/admin-dashboard-content";
+import { buildReportTrend } from "@/lib/report-summary";
+import {
+  DashboardTrendMobile,
+  DashboardStatusMobile,
+  DashboardNamedMobile,
+} from "@/components/dashboard-chart-mobile";
 
 export const dynamic = "force-dynamic";
 
@@ -53,10 +46,12 @@ function isoOffset(days: number): string {
 }
 
 export default async function DashboardPage() {
+  const { profile } = await requireProfile();
+  const canWrite = profile.role === "super_admin" || profile.role === "admin";
   const supabase = await createServerSupabase();
   const today = isoOffset(0);
 
-  const [{ data: allRaw }, { data: dateRaw }, recent] = await Promise.all([
+  const [{ data: allRaw }, { data: dateRaw }, { rows: workRows }] = await Promise.all([
     supabase
       .from("parking_requests")
       .select("id,status,cars_count,received_date,assigned_to,department:departments(name_th,short_name)"),
@@ -65,7 +60,7 @@ export default async function DashboardPage() {
       .select("request_date,parking_requests(cars_count,status)")
       .gte("request_date", today)
       .lte("request_date", isoOffset(13)),
-    listRequests(supabase, { limit: 8 }),
+    listRequests(supabase, { limit: 200 }),
   ]);
 
   const all = (allRaw ?? []) as unknown as Array<{
@@ -116,95 +111,110 @@ export default async function DashboardPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, c]) => ({ name: formatThaiDate(date).slice(0, 5), count: c }));
 
-  const recentRows = recent.rows as ParkingRequestListItem[];
+  const trend = buildReportTrend(all);
+
+  const workPanelRows = workRows as ParkingRequestListItem[];
 
   return (
     <>
-      <RealtimeRefresh />
       <PageHeader
         title={TH.nav.dashboard}
-        description="ภาพรวมคำขอที่จอดรถทั้งหมดในระบบ"
+        description="ติดตามคำขอที่ต้องจัดการ ปฏิทินด่วน และสรุปภาพรวม"
         actions={
-          <Button asChild>
-            <Link href="/requests/new">{TH.action.create}</Link>
-          </Button>
+          canWrite ? (
+            <Button asChild>
+              <Link href="/requests/new">{TH.action.create}</Link>
+            </Button>
+          ) : undefined
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label={TH.dashboard.totalRequests} value={all.length} icon={<FileText className="h-5 w-5" />} />
-        <StatCard label={TH.dashboard.pending} value={count("under_review")} icon={<Clock className="h-5 w-5" />} accentClassName="text-amber-600" />
-        <StatCard label={TH.dashboard.inProgress} value={count("in_progress")} icon={<Loader2 className="h-5 w-5" />} accentClassName="text-orange-600" />
-        <StatCard label={TH.dashboard.completed} value={count("completed")} icon={<CheckCircle2 className="h-5 w-5" />} accentClassName="text-emerald-600" />
-        <StatCard label={TH.dashboard.cancelled} value={count("cancelled")} icon={<XCircle className="h-5 w-5" />} accentClassName="text-slate-500" />
-        <StatCard label={TH.dashboard.carsToday} value={carsToday} icon={<Car className="h-5 w-5" />} hint={`ณ วันที่ ${formatThaiDate(today)}`} />
-        <StatCard label={TH.dashboard.lettersToday} value={lettersToday} icon={<Inbox className="h-5 w-5" />} />
-        <StatCard label={TH.dashboard.unassigned} value={unassigned} icon={<UserX className="h-5 w-5" />} accentClassName="text-amber-600" />
+      <div className="mb-4">
+        <StatusLegend statuses={ADMIN_STATUS_LEGEND} compact />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-base">{TH.dashboard.byStatus}</CardTitle></CardHeader>
-          <CardContent>
-            {statusData.length ? <StatusBarChart data={statusData} /> : <EmptyState title={TH.state.empty} />}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">{TH.dashboard.carsByDate}</CardTitle></CardHeader>
-          <CardContent>
-            {carsByDate.length ? <CarsByDateChart data={carsByDate} /> : <EmptyState title="ไม่มีคำขอในช่วง 14 วันข้างหน้า" />}
-          </CardContent>
-        </Card>
-      </div>
+      <AdminDashboardContent
+        rows={workPanelRows}
+        todayIso={today}
+        stats={{
+          total: all.length,
+          pending: count("under_review"),
+          inProgress: count("in_progress"),
+          completed: count("completed"),
+          carsToday,
+          unassigned,
+          lettersToday,
+          cancelled: count("cancelled"),
+        }}
+      />
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
-          <CardHeader><CardTitle className="text-base">{TH.dashboard.byDepartment}</CardTitle></CardHeader>
-          <CardContent>
-            {deptData.length ? <DeptBarChart data={deptData} /> : <EmptyState title={TH.state.empty} />}
-          </CardContent>
-        </Card>
+      <section className="mt-8 space-y-4">
+        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">วิเคราะห์และสรุป</h2>
 
-        <Card className="lg:col-span-3">
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="text-base">{TH.dashboard.recentRequests}</CardTitle>
-            <Button asChild variant="ghost" size="sm"><Link href="/requests">ดูทั้งหมด</Link></Button>
+        <Card className="lg:hidden">
+          <CardHeader>
+            <CardTitle className="text-base">แนวโน้มคำขอและจำนวนรถ</CardTitle>
+            <p className="text-sm text-muted-foreground">สรุป 7 วันล่าสุด</p>
           </CardHeader>
-          <CardContent className="px-0">
-            {recentRows.length ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">{TH.entity.requestNo}</TableHead>
-                    <TableHead className="text-right">{TH.entity.department}</TableHead>
-                    <TableHead className="text-right">{TH.entity.carsCount}</TableHead>
-                    <TableHead className="text-right">{TH.entity.status}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentRows.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        <Link href={`/requests/${r.id}`} className="font-medium text-primary hover:underline">
-                          {r.request_no}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">{r.official_letter_no}</div>
-                      </TableCell>
-                      <TableCell className="max-w-[180px] truncate text-sm">
-                        {r.department?.short_name || r.department?.name_th || "-"}
-                      </TableCell>
-                      <TableCell className="text-sm">{r.cars_count}</TableCell>
-                      <TableCell><StatusBadge status={r.status} /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="px-6"><EmptyState title="ยังไม่มีคำขอในระบบ" /></div>
-            )}
+          <CardContent>
+            <DashboardTrendMobile data={trend} />
           </CardContent>
         </Card>
-      </div>
+
+        <div className="grid gap-4 lg:hidden">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{TH.dashboard.byStatus}</CardTitle></CardHeader>
+            <CardContent>
+              <DashboardStatusMobile data={statusData} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle className="text-base">{TH.dashboard.carsByDate}</CardTitle></CardHeader>
+            <CardContent>
+              <DashboardNamedMobile data={carsByDate} emptyLabel="ไม่มีคำขอในช่วง 14 วันข้างหน้า" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle className="text-base">{TH.dashboard.byDepartment}</CardTitle></CardHeader>
+            <CardContent>
+              <DashboardNamedMobile data={deptData} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="hidden lg:block">
+          <CardHeader>
+            <CardTitle className="text-base">แนวโน้มคำขอและจำนวนรถ</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              ดูจำนวนคำขอและจำนวนรถตามช่วงเวลา — เลือกดูแบบรายวัน รายสัปดาห์ หรือรายเดือน
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PeriodTrendChart data={trend} />
+          </CardContent>
+        </Card>
+
+        <div className="hidden gap-4 lg:grid lg:grid-cols-2">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{TH.dashboard.byStatus}</CardTitle></CardHeader>
+            <CardContent>
+              {statusData.length ? <StatusBarChart data={statusData} /> : <EmptyState title={TH.state.empty} />}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle className="text-base">{TH.dashboard.carsByDate}</CardTitle></CardHeader>
+            <CardContent>
+              {carsByDate.length ? <CarsByDateChart data={carsByDate} /> : <EmptyState title="ไม่มีคำขอในช่วง 14 วันข้างหน้า" />}
+            </CardContent>
+          </Card>
+          <Card className="lg:col-span-2">
+            <CardHeader><CardTitle className="text-base">{TH.dashboard.byDepartment}</CardTitle></CardHeader>
+            <CardContent>
+              {deptData.length ? <DeptBarChart data={deptData} /> : <EmptyState title={TH.state.empty} />}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </>
   );
 }

@@ -87,31 +87,108 @@ export const STATUS_LABELS_TH: Record<RequestStatus, string> = {
   rejected: "ไม่อนุมัติ",
 };
 
-/** Tailwind class set for status badges (see @nacc/ui StatusBadge). */
-export const STATUS_BADGE_CLASSES: Record<RequestStatus, string> = {
-  draft: "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-500/20",
-  submitted: "bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-500/20",
-  under_review: "bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-500/20",
-  approved: "bg-green-100 text-green-700 ring-1 ring-inset ring-green-500/20",
-  assigned: "bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-500/20",
-  in_progress: "bg-orange-100 text-orange-700 ring-1 ring-inset ring-orange-500/20",
-  completed: "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-500/20",
-  cancelled: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-500/20",
-  rejected: "bg-red-100 text-red-700 ring-1 ring-inset ring-red-500/20",
+/** Short Thai hints for status legend on dashboard pages. */
+export const STATUS_HINTS_TH: Record<RequestStatus, string> = {
+  draft: "ยังบันทึกไม่เสร็จ ยังไม่ได้ส่งคำขอ",
+  submitted: "ส่งคำขอแล้ว รอผู้ดูแลตรวจสอบ",
+  under_review: "ผู้ดูแลกำลังพิจารณาอนุมัติ",
+  approved: "อนุมัติแล้ว รอ รปภ. รับงาน",
+  assigned: "รปภ. รับงานแล้ว",
+  in_progress: "กำลังจัดที่จอด / ดำเนินการ",
+  completed: "ดำเนินการเสร็จสมบูรณ์",
+  cancelled: "ยกเลิกคำขอแล้ว",
+  rejected: "ไม่ได้รับการอนุมัติ",
 };
 
-/** Hex colors for the FullCalendar event background per status. */
+/** Hex colors for calendar/charts and color swatches (see @nacc/ui StatusBadge). */
 export const STATUS_HEX: Record<RequestStatus, string> = {
-  draft: "#6b7280",
-  submitted: "#3b82f6",
-  under_review: "#f59e0b",
-  approved: "#22c55e",
-  assigned: "#a855f7",
-  in_progress: "#f97316",
-  completed: "#10b981",
-  cancelled: "#64748b",
-  rejected: "#ef4444",
+  draft: "#64748b",
+  submitted: "#0284c7",
+  under_review: "#ca8a04",
+  approved: "#65a30d",
+  assigned: "#7c3aed",
+  in_progress: "#ea580c",
+  completed: "#0891b2",
+  cancelled: "#71717a",
+  rejected: "#e11d48",
 };
+
+/** Status subsets for role-specific dashboard legends. */
+export const ADMIN_STATUS_LEGEND: RequestStatus[] = [...REQUEST_STATUSES];
+
+export const OFFICER_STATUS_LEGEND: RequestStatus[] = [
+  "draft",
+  "submitted",
+  "under_review",
+  "approved",
+  "assigned",
+  "in_progress",
+  "completed",
+  "cancelled",
+  "rejected",
+];
+
+export const COMMS_STATUS_LEGEND: RequestStatus[] = REQUEST_STATUSES.filter(
+  (s) => s !== "draft",
+);
+
+export const SECURITY_WORKFLOW_STATUSES = [
+  "approved",
+  "assigned",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly RequestStatus[];
+
+export const SECURITY_STATUS_LEGEND: SecurityWorkflowStatus[] = [
+  ...SECURITY_WORKFLOW_STATUSES,
+];
+
+/** รปภ. workflow statuses — same DB values, security-facing Thai labels. */
+export type SecurityWorkflowStatus = (typeof SECURITY_WORKFLOW_STATUSES)[number];
+
+export const SECURITY_STATUS_LABELS_TH: Record<SecurityWorkflowStatus, string> = {
+  approved: "รอรับทราบ",
+  assigned: "รับทราบแล้ว",
+  in_progress: "กำลังจัดที่จอด",
+  completed: "ทำงานเรียบร้อยแล้ว",
+  cancelled: "ยกเลิก",
+};
+
+export const SECURITY_STATUS_HINTS_TH: Record<SecurityWorkflowStatus, string> = {
+  approved: "งานอนุมัติแล้ว รอ รปภ. กดรับทราบ",
+  assigned: "รับทราบแล้ว รอเริ่มจัดที่จอด",
+  in_progress: "กำลังจัดกรวย / ถ่ายรูปส่งงาน",
+  completed: "จัดที่จอดและส่งงานเรียบร้อยแล้ว",
+  cancelled: "งานถูกยกเลิก",
+};
+
+export const SECURITY_STATUS_HEX: Record<SecurityWorkflowStatus, string> = {
+  approved: "#ca8a04",
+  assigned: "#7c3aed",
+  in_progress: "#ea580c",
+  completed: "#16a34a",
+  cancelled: "#71717a",
+};
+
+export function isSecurityWorkflowStatus(status: RequestStatus): status is SecurityWorkflowStatus {
+  return (SECURITY_WORKFLOW_STATUSES as readonly RequestStatus[]).includes(status);
+}
+
+/** Prep urgency tags shown on security cards (separate from workflow status). */
+export const SECURITY_PREP_URGENCY_LEGEND = [
+  { level: "normal", label: "ปกติ", hint: "ยังไม่ใกล้วันจอด", hex: "#0d9488" },
+  { level: "soon", label: "ด่วน", hint: "ใกล้ถึงวันจอด 2–3 วัน", hex: "#ea580c" },
+  { level: "critical", label: "ด่วนมากๆ", hint: "วันนี้/พรุ่งนี้ ต้องจัดล่วงหน้า", hex: "#dc2626" },
+  {
+    level: "overdue",
+    label: "ยังไม่ได้จัดที่จอดรถ",
+    hint: "ถึงวันแล้วแต่ยังไม่เริ่มจัด",
+    hex: "#b91c1c",
+  },
+] as const;
+
+export type SecurityPrepUrgencyLevel = (typeof SECURITY_PREP_URGENCY_LEGEND)[number]["level"];
 
 /**
  * Allowed transitions in the active approval workflow.

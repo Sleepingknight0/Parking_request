@@ -17,6 +17,7 @@ import { TH, ROLE_LABELS_TH } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
 import { requireProfile } from "@nacc/auth/guards";
 import { formatThaiDateTime } from "@nacc/utils";
+import { SheetSyncPanel } from "./sheet-sync-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,9 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Google Sheets sync panel */}
+      <SheetSyncPanel />
 
       <Card className="mt-6">
         <CardHeader><CardTitle className="text-base">{TH.nav.activityLogs}</CardTitle></CardHeader>

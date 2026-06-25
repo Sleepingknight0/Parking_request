@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Pencil,
   Send,
-  UserPlus,
   PlayCircle,
   CheckCircle2,
   XCircle,
@@ -17,11 +16,6 @@ import {
   Button,
   Textarea,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -30,13 +24,12 @@ import {
   DialogFooter,
   toast,
 } from "@nacc/ui";
-import { TH, type RequestStatus, type ProfileRef } from "@nacc/types";
+import { TH, type RequestStatus } from "@nacc/types";
 import {
   submitRequest,
   markUnderReview,
   approveRequest,
   rejectRequest,
-  assignRequest,
   changeStatus,
   completeRequest,
   cancelRequest,
@@ -47,16 +40,15 @@ import {
 export function RequestActions({
   id,
   status,
-  securityStaff,
+  readOnly = false,
 }: {
   id: string;
   status: RequestStatus;
-  securityStaff: ProfileRef[];
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
-  const [dialog, setDialog] = React.useState<null | "assign" | "cancel" | "complete" | "reject">(null);
-  const [assignee, setAssignee] = React.useState("");
+  const [dialog, setDialog] = React.useState<null | "cancel" | "complete" | "reject">(null);
   const [reason, setReason] = React.useState("");
   const [note, setNote] = React.useState("");
 
@@ -77,7 +69,9 @@ export function RequestActions({
     }
   }
 
-  const canEdit = !["completed", "cancelled", "rejected"].includes(status);
+  const canEdit = !readOnly && !["completed", "cancelled", "rejected"].includes(status);
+
+  if (readOnly) return null;
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -115,12 +109,11 @@ export function RequestActions({
         </>
       )}
 
-      {(status === "approved" || status === "assigned") && (
-        <Button className="gap-2" disabled={pending} onClick={() => setDialog("assign")}>
-          <UserPlus className="h-4 w-4" />
-          {status === "assigned" ? TH.action.reassign : TH.action.assign}
-        </Button>
-      )}
+      {status === "approved" ? (
+        <p className="w-full text-sm text-muted-foreground">
+          รอพนักงาน รปภ. รับทราบงานเองในแอปผู้ใช้ — ไม่มอบหมายให้บุคคลจากแอดมิน
+        </p>
+      ) : null}
 
       {status === "assigned" && (
         <Button className="gap-2" variant="secondary" disabled={pending}
@@ -142,34 +135,6 @@ export function RequestActions({
       )}
 
       <DeleteButton id={id} pending={pending} onRun={run} />
-
-      {/* Assign dialog */}
-      <Dialog open={dialog === "assign"} onOpenChange={(o) => !o && setDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{TH.action.assign}</DialogTitle>
-            <DialogDescription>เลือกพนักงานสื่อสาร/รปภ. ผู้รับผิดชอบงานนี้</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label>{TH.entity.assignedTo}</Label>
-            <Select value={assignee} onValueChange={setAssignee}>
-              <SelectTrigger><SelectValue placeholder="เลือกผู้รับผิดชอบ" /></SelectTrigger>
-              <SelectContent>
-                {securityStaff.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.display_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialog(null)}>{TH.action.close}</Button>
-            <Button disabled={pending || !assignee}
-              onClick={() => run(() => assignRequest(id, assignee), "มอบหมายงานแล้ว")}>
-              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : TH.action.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Cancel dialog */}
       <Dialog open={dialog === "cancel"} onOpenChange={(o) => !o && setDialog(null)}>

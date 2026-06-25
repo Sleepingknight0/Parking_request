@@ -119,6 +119,8 @@ type ParkingRequestsRow = {
   assigned_at: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  comms_verified_by: string | null;
+  comms_verified_at: string | null;
   rejected_by: string | null;
   rejected_at: string | null;
   cancelled_by: string | null;
@@ -159,6 +161,8 @@ type ParkingRequestsInsert = {
   assigned_at?: string | null;
   approved_by?: string | null;
   approved_at?: string | null;
+  comms_verified_by?: string | null;
+  comms_verified_at?: string | null;
   rejected_by?: string | null;
   rejected_at?: string | null;
   cancelled_by?: string | null;

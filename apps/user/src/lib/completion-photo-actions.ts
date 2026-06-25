@@ -1,17 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabase } from "@nacc/db/server";
 import { createServiceClient } from "@nacc/db/service";
-import { requireProfile } from "@nacc/auth/guards";
 import {
   FILE_TYPE_FOLDER,
   isCompletionPhotoMimeType,
   STORAGE_BUCKET,
   TH,
 } from "@nacc/types";
+import { sanitizeStorageFilename } from "@nacc/utils";
 import { assertSupabaseStorageReady } from "./storage-guards";
 import type { ActionResult } from "./request-actions";
+import { requireAppMode } from "./user-guards";
+import { getUserAppDb } from "./user-db";
+import { tryCommsAutoVerifyRequest } from "./comms-operational-settings";
 
 function revalidateUserRequest(id?: string) {
   revalidatePath("/security/dashboard");
@@ -30,8 +32,7 @@ async function logActivity(
   actorId: string,
   metadata?: Record<string, unknown>,
 ) {
-  const supabase = await createServerSupabase();
-  await supabase.from("activity_logs").insert({
+  await getUserAppDb().from("activity_logs").insert({
     actor_id: actorId,
     action,
     entity_type: "parking_request",
@@ -45,7 +46,7 @@ function buildCompletionPhotoPath(
   requestNo: string,
   fileName: string,
 ): string {
-  const safeName = fileName.replace(/[^\w.\-\u0E00-\u0E7F]+/g, "_");
+  const safeName = sanitizeStorageFilename(fileName);
   const safeNo = requestNo.replace(/[^\w-]+/g, "_");
   return `${FILE_TYPE_FOLDER.completion_photo}/${requestId}/${safeNo}-${Date.now()}-${safeName}`;
 }
@@ -54,8 +55,7 @@ async function assertSecurityCanUploadCompletion(
   requestId: string,
   profileId: string,
 ): Promise<{ ok: true; requestNo: string } | { ok: false; error: string }> {
-  const supabase = await createServerSupabase();
-  const { data: request, error } = await supabase
+  const { data: request, error } = await getUserAppDb()
     .from("parking_requests")
     .select("id, request_no, status, assigned_to")
     .eq("id", requestId)
@@ -67,7 +67,7 @@ async function assertSecurityCanUploadCompletion(
   if (request.assigned_to !== profileId) {
     return { ok: false, error: "คุณไม่มีสิทธิ์แนบรูปส่งงานสำหรับงานนี้" };
   }
-  if (!["assigned", "in_progress"].includes(request.status)) {
+  if (request.status !== "in_progress") {
     return { ok: false, error: "แนบรูปส่งงานได้เฉพาะงานที่กำลังดำเนินการ" };
   }
   return { ok: true, requestNo: request.request_no };
@@ -81,7 +81,7 @@ export async function uploadCompletionPhoto(
   const storageGate = assertSupabaseStorageReady();
   if (storageGate) return storageGate;
 
-  const { profile } = await requireProfile({ roles: ["security_staff"] });
+  const { profile } = await requireAppMode("security");
 
   const gate = await assertSecurityCanUploadCompletion(requestId, profile.id);
   if (!gate.ok) return { ok: false, error: gate.error };
@@ -113,8 +113,7 @@ export async function uploadCompletionPhoto(
     return { ok: false, error: TH.action.completionUploadFailed };
   }
 
-  const supabase = await createServerSupabase();
-  const { error: dbError } = await supabase.from("request_attachments").insert({
+  const { error: dbError } = await getUserAppDb().from("request_attachments").insert({
     request_id: requestId,
     uploaded_by: profile.id,
     file_type: "completion_photo",
@@ -152,10 +151,10 @@ export async function completeJobWithPhotos(
   id: string,
   note?: string,
 ): Promise<ActionResult> {
-  const { profile } = await requireProfile({ roles: ["security_staff"] });
-  const supabase = await createServerSupabase();
+  const { profile } = await requireAppMode("security");
+  const db = getUserAppDb();
 
-  const { data: request, error: reqError } = await supabase
+  const { data: request, error: reqError } = await db
     .from("parking_requests")
     .select("id, status, assigned_to")
     .eq("id", id)
@@ -165,11 +164,11 @@ export async function completeJobWithPhotos(
   if (request.assigned_to !== profile.id) {
     return { ok: false, error: "คุณไม่มีสิทธิ์ปิดงานนี้" };
   }
-  if (!["assigned", "in_progress"].includes(request.status)) {
+  if (request.status !== "in_progress") {
     return { ok: false, error: "ไม่สามารถปิดงานในสถานะนี้ได้" };
   }
 
-  const { count } = await supabase
+  const { count } = await db
     .from("request_attachments")
     .select("id", { count: "exact", head: true })
     .eq("request_id", id)
@@ -179,7 +178,7 @@ export async function completeJobWithPhotos(
     return { ok: false, error: TH.action.requireCompletionPhoto };
   }
 
-  const { error } = await supabase
+  const { data, error } = await db
     .from("parking_requests")
     .update({
       status: "completed",
@@ -187,11 +186,16 @@ export async function completeJobWithPhotos(
       completed_by: profile.id,
     })
     .eq("id", id)
-    .eq("assigned_to", profile.id);
+    .eq("assigned_to", profile.id)
+    .eq("status", "in_progress")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "ปิดงานได้เฉพาะงานที่กำลังดำเนินการเท่านั้น" };
 
   await logActivity("request.complete", id, profile.id, { app: "user" });
+  await tryCommsAutoVerifyRequest(id);
   revalidateUserRequest(id);
   return { ok: true, id };
 }

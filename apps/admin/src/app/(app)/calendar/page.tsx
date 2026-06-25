@@ -1,7 +1,7 @@
-import { PageHeader } from "@nacc/ui";
-import { TH, STATUS_HEX, type RequestStatus } from "@nacc/types";
+import { PageHeader, StatusLegend } from "@nacc/ui";
+import { TH, STATUS_HEX, ADMIN_STATUS_LEGEND, type RequestStatus } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
-import { RealtimeRefresh } from "@/components/realtime-refresh";
+import { todayISO } from "@nacc/utils";
 import { RequestCalendar, type CalendarEvent } from "@/components/request-calendar";
 
 export const dynamic = "force-dynamic";
@@ -45,11 +45,15 @@ export default async function CalendarPage() {
       };
     });
 
+  const today = todayISO();
+
   return (
     <>
-      <RealtimeRefresh />
       <PageHeader title={TH.nav.calendar} description="ปฏิทินวันที่ขอใช้ที่จอดรถ" />
-      <RequestCalendar events={events} />
+      <div className="mb-4">
+        <StatusLegend statuses={ADMIN_STATUS_LEGEND} compact />
+      </div>
+      <RequestCalendar events={events} todayIso={today} />
     </>
   );
 }

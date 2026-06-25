@@ -15,7 +15,7 @@ import {
   googleSheetsId,
   googleSheetsTabName,
 } from "@nacc/storage";
-import { buildLiveSheetRow, formatTimeTh, LIVE_SHEET_HEADERS, type LiveSheetRequest } from "@nacc/utils";
+import { buildLiveSheetRow, formatTimeThDot, LIVE_SHEET_HEADERS, type LiveSheetRequest } from "@nacc/utils";
 
 export async function syncRequestToSheet(requestId: string): Promise<void> {
   if (!isSheetsConfigured()) return;
@@ -39,8 +39,8 @@ export async function syncRequestToSheet(requestId: string): Promise<void> {
 
     const firstDate = (r.request_dates as any[])[0] ?? null;
     const firstDateStr: string | null = firstDate?.request_date ?? r.received_date ?? null;
-    const startStr = firstDate ? formatTimeTh(firstDate.start_time) : "";
-    const endStr = firstDate ? formatTimeTh(firstDate.end_time) : "";
+    const startStr = firstDate ? formatTimeThDot(firstDate.start_time) : "";
+    const endStr = firstDate ? formatTimeThDot(firstDate.end_time) : "";
     const timeRange = startStr && endStr ? `${startStr}-${endStr}` : startStr || endStr || "";
 
     const mirror: LiveSheetRequest = {

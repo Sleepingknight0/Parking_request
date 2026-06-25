@@ -13,10 +13,9 @@
 -- Roles & access summary
 -- ----------------------------------------------------------------------------
 -- super_admin / admin   full read + write on every table
--- officer               read+write OWN parking_requests (created_by = self);
---                       UPDATE only while status in {draft, submitted,
---                       under_review, approved} AND assigned_to IS NULL;
---                       may DELETE own drafts
+-- officer               read ALL parking_requests; UPDATE unassigned requests in
+--                       {draft, submitted, under_review, approved} (shared pool);
+--                       may DELETE any draft
 -- security_staff        READ requests in {approved, assigned, in_progress,
 --                       completed, cancelled}; may UPDATE to accept an approved
 --                       job (assigned_to → self) or progress a job assigned to

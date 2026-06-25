@@ -113,10 +113,68 @@ pnpm build
 
 ## App Deployment
 
-Deploy the two Next.js apps separately:
+Deploy the two Next.js apps separately on Vercel:
 
-- Admin app root: `apps/admin`
-- User app root: `apps/user`
+| App | Vercel project | Root directory | Production URL |
+|-----|----------------|----------------|----------------|
+| Admin | `nacc-parking-admin` | `apps/admin` | https://nacc-parking-admin.vercel.app |
+| User | `nacc-parking-user` | `apps/user` | https://nacc-parking-user.vercel.app |
+
+Each project uses:
+
+```json
+{
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@nacc/admin"
+}
+```
+
+(Replace filter with `@nacc/user` for the user app.)
+
+CLI (from repo root, after `pnpm dlx vercel login`):
+
+```bash
+pnpm dlx vercel deploy --prod --project nacc-parking-admin
+pnpm dlx vercel deploy --prod --project nacc-parking-user
+```
+
+Set env vars on **both** Vercel projects (Production + Preview). Include `NEXT_PUBLIC_ADMIN_APP_URL` and `NEXT_PUBLIC_USER_APP_URL` pointing at the URLs above.
+
+### GitHub auto-deploy
+
+Both Vercel projects are linked to `https://github.com/Sleepingknight0/Parking_request`:
+
+| Project | Root directory | Production branch |
+|---------|----------------|-------------------|
+| `nacc-parking-admin` | `apps/admin` | `main` |
+| `nacc-parking-user` | `apps/user` | `main` |
+
+**Workflow:**
+
+- **Push or merge to `main`** → Vercel builds and deploys **Production** for both apps automatically.
+- **Push to any other branch** (e.g. `supabase-env`) → **Preview** deployments (unique URLs per branch).
+- Pull requests opened against `main` also get Preview deployments.
+
+No manual `vercel deploy` is required after Git is connected. Use CLI deploy only for one-off or emergency releases.
+
+**Reconnect Git (if dashboard shows "Connect Git Repository"):**
+
+```bash
+pnpm dlx vercel link --project nacc-parking-admin --yes
+pnpm dlx vercel git connect https://github.com/Sleepingknight0/Parking_request.git
+
+pnpm dlx vercel link --project nacc-parking-user --yes
+pnpm dlx vercel git connect https://github.com/Sleepingknight0/Parking_request.git
+```
+
+**Note:** `vercel link` updates `.vercel/project.json` for one project at a time. Use `--project` to switch between admin and user for CLI deploys.
+
+**Supabase Auth:** add redirect URLs in [Supabase Dashboard → Auth](https://supabase.com/dashboard/project/pgwpmmmsdobwvxcwlleu/auth/url-configuration):
+
+- `https://nacc-parking-admin.vercel.app/**`
+- `https://nacc-parking-user.vercel.app/**`
+
+**Cron (admin):** Google Sheets poll runs daily (`0 2 * * *`) on Hobby plan. Upgrade to Pro for more frequent schedules.
 
 Both apps must point to the same Supabase project and use the same Auth settings.
 

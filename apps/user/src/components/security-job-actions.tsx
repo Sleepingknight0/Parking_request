@@ -16,28 +16,26 @@ import {
   toast,
 } from "@nacc/ui";
 import { TH, type RequestStatus } from "@nacc/types";
-import {
-  acceptJob,
-  cancelJob,
-  completeJob,
-  startJob,
-  type ActionResult,
-} from "@/lib/request-actions";
+import { cancelJob, completeJob, startJob, type ActionResult } from "@/lib/request-actions";
+import type { SecurityJobRow } from "@/lib/security-job-utils";
+import { SecuritySignMethodDialog } from "./security-sign-method-dialog";
 
 export function SecurityJobActions({
-  id,
-  status,
+  job,
+  todayIso,
   assignedToMe,
 }: {
-  id: string;
-  status: RequestStatus;
+  job: SecurityJobRow;
+  todayIso: string;
   assignedToMe: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [dialog, setDialog] = React.useState<null | "complete" | "cancel">(null);
+  const [signDialogOpen, setSignDialogOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [reason, setReason] = React.useState("");
+  const { id, status } = job;
 
   async function run(fn: () => Promise<ActionResult>, message: string) {
     setPending(true);
@@ -58,9 +56,9 @@ export function SecurityJobActions({
   return (
     <div className="flex flex-wrap gap-2">
       {status === "approved" ? (
-        <Button className="gap-2" disabled={pending} onClick={() => run(() => acceptJob(id), "รับงานแล้ว")}>
+        <Button className="gap-2" onClick={() => setSignDialogOpen(true)}>
           <ShieldCheck className="h-4 w-4" />
-          {TH.action.acceptJob}
+          {TH.security.acknowledge}
         </Button>
       ) : null}
 
@@ -69,17 +67,17 @@ export function SecurityJobActions({
           className="gap-2"
           variant="secondary"
           disabled={pending}
-          onClick={() => run(() => startJob(id), "เริ่มดำเนินการแล้ว")}
+          onClick={() => run(() => startJob(id), "เริ่มจัดที่จอดแล้ว")}
         >
           <PlayCircle className="h-4 w-4" />
-          {TH.action.startJob}
+          {TH.security.startArranging}
         </Button>
       ) : null}
 
       {status === "in_progress" && assignedToMe ? (
         <Button className="gap-2" disabled={pending} onClick={() => setDialog("complete")}>
           <CheckCircle2 className="h-4 w-4" />
-          {TH.action.completeJob}
+          {TH.security.submitWork}
         </Button>
       ) : null}
 
@@ -93,7 +91,7 @@ export function SecurityJobActions({
       <Dialog open={dialog === "complete"} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{TH.action.completeJob}</DialogTitle>
+            <DialogTitle>{TH.security.submitWork}</DialogTitle>
             <DialogDescription>ต้องแนบรูปถ่ายส่งงานอย่างน้อย 1 รูปก่อนยืนยัน</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
@@ -104,7 +102,7 @@ export function SecurityJobActions({
             <Button variant="outline" onClick={() => setDialog(null)}>
               {TH.action.close}
             </Button>
-            <Button disabled={pending} onClick={() => run(() => completeJob(id, note), "ปิดงานแล้ว")}>
+            <Button disabled={pending} onClick={() => run(() => completeJob(id, note), TH.security.workDone)}>
               {TH.action.confirm}
             </Button>
           </DialogFooter>
@@ -135,6 +133,14 @@ export function SecurityJobActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SecuritySignMethodDialog
+        job={job}
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        andStart={false}
+        todayIso={todayIso}
+      />
     </div>
   );
 }

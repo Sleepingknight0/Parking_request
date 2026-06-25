@@ -59,3 +59,16 @@ Completion requires:
 - `completed_at`
 
 Completion note is optional.
+
+## Comms Direct Record
+
+Comms staff may create requests in `comms` mode. Submit sets status `approved` immediately (skips `submitted` / `under_review`) so security can accept the job. Officer-created requests still use the normal approval path.
+
+## Comms Verification
+
+After security marks a request `completed`, comms staff may confirm the work in the user app (`comms` mode). This sets:
+
+- `comms_verified_by`
+- `comms_verified_at`
+
+Status remains `completed`; verification is tracked separately from security completion.

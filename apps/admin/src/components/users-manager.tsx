@@ -52,13 +52,14 @@ export function UsersManager({
   const [pwUser, setPwUser] = React.useState<UserRow | null>(null);
   const [pending, setPending] = React.useState(false);
 
-  // create form state
+  const DEPT_NONE = "__none__";
+
   const [form, setForm] = React.useState({
     username: "",
     display_name: "",
     password: "",
     role: "officer" as Role,
-    department_id: "",
+    department_id: DEPT_NONE,
     phone: "",
   });
   const [newPassword, setNewPassword] = React.useState("");
@@ -71,7 +72,7 @@ export function UsersManager({
         display_name: form.display_name,
         password: form.password,
         role: form.role,
-        department_id: form.department_id || undefined,
+        department_id: form.department_id === DEPT_NONE ? undefined : form.department_id,
         phone: form.phone || undefined,
       });
       if (!res.ok) {
@@ -80,7 +81,7 @@ export function UsersManager({
       }
       toast.success("สร้างบัญชีผู้ใช้แล้ว");
       setCreateOpen(false);
-      setForm({ username: "", display_name: "", password: "", role: "officer", department_id: "", phone: "" });
+      setForm({ username: "", display_name: "", password: "", role: "officer", department_id: DEPT_NONE, phone: "" });
       router.refresh();
     } finally {
       setPending(false);
@@ -200,9 +201,13 @@ export function UsersManager({
               </Select>
             </Field>
             <Field label="สำนัก/หน่วยงาน">
-              <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v })}>
+              <Select
+                value={form.department_id}
+                onValueChange={(v) => setForm({ ...form, department_id: v })}
+              >
                 <SelectTrigger><SelectValue placeholder="ไม่ระบุ" /></SelectTrigger>
                 <SelectContent className="max-h-60">
+                  <SelectItem value={DEPT_NONE}>ไม่ระบุ</SelectItem>
                   {departments.map((d) => (<SelectItem key={d.id} value={d.id}>{d.name_th}</SelectItem>))}
                 </SelectContent>
               </Select>

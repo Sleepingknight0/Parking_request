@@ -21,7 +21,7 @@ import {
 } from "@nacc/storage";
 import {
   buildLiveSheetRow,
-  formatTimeTh,
+  formatTimeThDot,
   LIVE_SHEET_HEADERS,
   type LiveSheetRequest,
 } from "@nacc/utils";
@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
   // ── Build the first date + time_range ────────────────────────────────────
   const firstDate = (r.request_dates as any[])[0] ?? null;
   const firstDateStr: string | null = firstDate?.request_date ?? r.received_date ?? null;
-  const startStr = firstDate ? formatTimeTh(firstDate.start_time) : "";
-  const endStr = firstDate ? formatTimeTh(firstDate.end_time) : "";
+  const startStr = firstDate ? formatTimeThDot(firstDate.start_time) : "";
+  const endStr = firstDate ? formatTimeThDot(firstDate.end_time) : "";
   const timeRange = startStr && endStr ? `${startStr}-${endStr}` : startStr || endStr || "";
 
   const locationName: string | null =

@@ -1,23 +1,19 @@
-import { requireProfile } from "@nacc/auth/guards";
+import { requireAppMode } from "@/lib/user-guards";
 import { UserShell } from "@/components/user-shell";
-import { logout } from "@/lib/auth-actions";
+import { switchRole } from "@/lib/auth-actions";
 
 export default async function SecurityLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireProfile({
-    roles: ["security_staff"],
-    loginPath: "/login",
-    noAccessPath: "/select-role",
-  });
+  const { displayName } = await requireAppMode("security");
 
   return (
     <UserShell
-      profile={{ display_name: profile.display_name, role: profile.role }}
+      profile={{ display_name: displayName }}
       mode="security"
-      logout={logout}
+      switchRole={switchRole}
     >
       {children}
     </UserShell>
