@@ -152,7 +152,7 @@ Both Vercel projects are linked to `https://github.com/Sleepingknight0/Parking_r
 **Workflow:**
 
 - **Push or merge to `main`** → Vercel builds and deploys **Production** for both apps automatically.
-- **Push to any other branch** (e.g. `supabase-env`) → **Preview** deployments (unique URLs per branch).
+- **Push to any other branch** → **Preview** deployments (unique URLs per branch).
 - Pull requests opened against `main` also get Preview deployments.
 
 No manual `vercel deploy` is required after Git is connected. Use CLI deploy only for one-off or emergency releases.

@@ -19,13 +19,6 @@ export default async function LoginPage({
         subtitle="สำหรับผู้ดูแลระบบและเจ้าหน้าที่"
         otherAppUrl={process.env.NEXT_PUBLIC_USER_APP_URL}
         initialError={initialError}
-        footer={
-          <span>
-            บัญชีเดโม: <strong>admin / admin</strong>
-            <br />
-            (กรุณาเปลี่ยนรหัสผ่านก่อนใช้งานจริง)
-          </span>
-        }
       />
     </main>
   );

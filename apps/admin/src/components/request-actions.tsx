@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Pencil,
   Send,
+  UserPlus,
   PlayCircle,
   CheckCircle2,
   XCircle,
@@ -22,6 +23,11 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   toast,
 } from "@nacc/ui";
 import { TH, type RequestStatus } from "@nacc/types";
@@ -29,6 +35,7 @@ import {
   submitRequest,
   markUnderReview,
   approveRequest,
+  assignRequest,
   rejectRequest,
   changeStatus,
   completeRequest,
@@ -41,16 +48,21 @@ export function RequestActions({
   id,
   status,
   readOnly = false,
+  securityStaff = [],
+  assignedTo,
 }: {
   id: string;
   status: RequestStatus;
   readOnly?: boolean;
+  securityStaff?: Array<{ id: string; display_name: string }>;
+  assignedTo?: string | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
-  const [dialog, setDialog] = React.useState<null | "cancel" | "complete" | "reject">(null);
+  const [dialog, setDialog] = React.useState<null | "assign" | "cancel" | "complete" | "reject">(null);
   const [reason, setReason] = React.useState("");
   const [note, setNote] = React.useState("");
+  const [assignee, setAssignee] = React.useState(assignedTo ?? "");
 
   async function run(fn: () => Promise<ActionResult>, successMsg: string) {
     setPending(true);
@@ -109,10 +121,16 @@ export function RequestActions({
         </>
       )}
 
-      {status === "approved" ? (
-        <p className="w-full text-sm text-muted-foreground">
-          รอพนักงาน รปภ. รับทราบงานเองในแอปผู้ใช้ — ไม่มอบหมายให้บุคคลจากแอดมิน
-        </p>
+      {["approved", "assigned", "in_progress"].includes(status) ? (
+        <Button
+          className="gap-2"
+          variant={status === "approved" ? "default" : "outline"}
+          disabled={pending || securityStaff.length === 0}
+          onClick={() => setDialog("assign")}
+        >
+          <UserPlus className="h-4 w-4" />
+          {status === "approved" ? "มอบหมายงาน" : "มอบหมายใหม่"}
+        </Button>
       ) : null}
 
       {status === "assigned" && (
@@ -135,6 +153,42 @@ export function RequestActions({
       )}
 
       <DeleteButton id={id} pending={pending} onRun={run} />
+
+      {/* Cancel dialog */}
+      <Dialog open={dialog === "assign"} onOpenChange={(o) => !o && setDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{status === "approved" ? "มอบหมายงานให้ รปภ." : "มอบหมายงานใหม่"}</DialogTitle>
+            <DialogDescription>
+              ผู้ดูแลสามารถมอบหมายหรือเปลี่ยนผู้รับผิดชอบแทนฝั่งผู้ใช้ได้
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{TH.entity.assignedTo}</Label>
+            <Select value={assignee} onValueChange={setAssignee}>
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกผู้รับผิดชอบ" />
+              </SelectTrigger>
+              <SelectContent>
+                {securityStaff.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialog(null)}>{TH.action.close}</Button>
+            <Button
+              disabled={pending || !assignee}
+              onClick={() => run(() => assignRequest(id, assignee), "มอบหมายงานแล้ว")}
+            >
+              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : TH.action.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel dialog */}
       <Dialog open={dialog === "cancel"} onOpenChange={(o) => !o && setDialog(null)}>

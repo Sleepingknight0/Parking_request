@@ -77,7 +77,6 @@ export function LoginCard({
               autoComplete="username"
               required
               autoFocus
-              placeholder="admin"
             />
           </div>
           <div className="space-y-1.5">

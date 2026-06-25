@@ -33,5 +33,5 @@ export async function enterSecurityMode(): Promise<void> {
 export async function enterSuperAdminMode(): Promise<void> {
   const adminUrl = process.env.NEXT_PUBLIC_ADMIN_APP_URL?.replace(/\/$/, "");
   if (!adminUrl) redirect("/?error=admin");
-  redirect(`${adminUrl}/api/auth/demo-enter`);
+  redirect(`${adminUrl}/login`);
 }

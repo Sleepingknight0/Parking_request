@@ -155,12 +155,14 @@ export function AttachmentPreviewSection({
   signedSupabaseUrls,
   upload,
   emptyMessage,
+  uploaderById,
 }: {
   label: string;
   items: Attachment[];
   signedSupabaseUrls: Record<string, string>;
   upload?: React.ReactNode;
   emptyMessage?: string;
+  uploaderById?: Record<string, string>;
 }) {
   return (
     <div>
@@ -173,6 +175,7 @@ export function AttachmentPreviewSection({
         signedSupabaseUrls={signedSupabaseUrls}
         dialogTitle={label}
         emptyMessage={emptyMessage ?? `ยังไม่มี${label}`}
+        uploaderById={uploaderById}
       />
     </div>
   );

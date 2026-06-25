@@ -38,7 +38,7 @@ const modes = [
   {
     key: "super_admin" as const,
     title: ROLE_LABELS_TH.super_admin,
-    description: "แดชบอร์ด รายงาน และจัดการระบบ",
+    description: "แดชบอร์ด รายงาน และจัดการระบบ (ต้องล็อกอิน)",
     action: enterSuperAdminMode,
     icon: Settings2,
     accent: "bg-amber-50 text-amber-800",
@@ -90,7 +90,7 @@ export function RolePicker({ error }: { error?: string }) {
       </section>
 
       <p className="text-center text-xs text-slate-500">
-        {TH.app.userName} — เลือกบทบาทแล้วเข้าใช้งานได้ทันที (ไม่ต้องล็อกอิน)
+        {TH.app.userName} — เจ้าหน้าที่ / สื่อสาร / รปภ. เข้าใช้งานได้ทันที · ผู้ดูแลระบบต้องล็อกอิน
       </p>
     </div>
   );

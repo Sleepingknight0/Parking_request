@@ -244,13 +244,57 @@ export async function rejectRequest(id: string, reason?: string): Promise<Action
 }
 
 export async function assignRequest(
-  _id: string,
-  _assignedTo: string,
+  id: string,
+  assignedTo: string,
 ): Promise<ActionResult> {
-  return {
-    ok: false,
-    error: "การมอบหมายงานทำโดยพนักงาน รปภ. รับทราบเองในแอปผู้ใช้",
+  const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
+  if (!assignedTo) return { ok: false, error: "กรุณาเลือกผู้รับผิดชอบ" };
+
+  const supabase = await createServerSupabase();
+  const { data: assignee } = await supabase
+    .from("profiles")
+    .select("id,role,is_active")
+    .eq("id", assignedTo)
+    .eq("role", "security_staff")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!assignee) return { ok: false, error: "ไม่พบผู้รับผิดชอบ รปภ. ที่ใช้งานอยู่" };
+
+  const { data: request, error: requestError } = await supabase
+    .from("parking_requests")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (requestError) return { ok: false, error: requestError.message };
+  if (!request) return { ok: false, error: "ไม่พบคำขอ" };
+  if (!["approved", "assigned", "in_progress"].includes(request.status)) {
+    return { ok: false, error: "มอบหมายงานได้เฉพาะคำขอที่อนุมัติแล้วหรือกำลังดำเนินการ" };
+  }
+
+  const patch: Record<string, unknown> = {
+    assigned_to: assignedTo,
+    assigned_by: profile.id,
+    assigned_at: new Date().toISOString(),
   };
+  if (request.status === "approved") patch.status = "assigned";
+
+  const { error } = await supabase
+    .from("parking_requests")
+    .update(patch)
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+
+  await logActivity(request.status === "approved" ? "request.assign" : "request.reassign", id, profile.id, {
+    assigned_to: assignedTo,
+  });
+  revalidatePath(`/requests/${id}`);
+  revalidatePath("/requests");
+  revalidatePath("/dashboard");
+  void syncRequestToSheet(id);
+  return { ok: true, id };
 }
 
 /** Generic status move for valid transitions (for example assigned -> in_progress). */

@@ -9,8 +9,8 @@ const PUBLIC_PATHS = ["/login", "/no-access"];
  *
  * Required by @supabase/ssr — without it, refresh-token rotation desyncs and the
  * session is dropped after the first navigation. API routes are excluded from
- * the matcher: they authenticate themselves (demo-enter sets the session, the
- * /api/sync/* routes use a shared secret), so they must not be redirected here.
+ * the matcher: they authenticate themselves (/api/sync/* routes use a shared
+ * secret), so they must not be redirected here.
  */
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);

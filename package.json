@@ -1,6 +1,6 @@
 {
   "name": "nacc-parking-request-system",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "NACC-style Thai parking request management system (Admin + User apps on Next.js + Supabase)",
   "packageManager": "pnpm@11.0.8",

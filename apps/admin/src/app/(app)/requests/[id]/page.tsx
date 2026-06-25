@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Paperclip, FileText, ImageIcon, Download, Printer } from "lucide-react";
+import { ArrowRight, Printer } from "lucide-react";
 import {
+  AttachmentPreviewSection,
   CompletionPhotoGallery,
   PageHeader,
   Button,
@@ -27,13 +28,13 @@ import {
   formatThaiDate,
   formatThaiDateTime,
   formatTimeRange,
-  formatBytes,
   formatPhone,
-  resolveAttachmentViewUrl,
 } from "@nacc/utils";
 import { getSignedUrls } from "@/lib/storage";
 import { RequestActions } from "@/components/request-actions";
 import { AttachmentUploader } from "@/components/attachment-uploader";
+import { AdminSecuritySignPanel } from "@/components/admin-security-sign-panel";
+import { buildAdminSecuritySignPayloads } from "@/lib/security-signs";
 
 export const dynamic = "force-dynamic";
 
@@ -49,16 +50,37 @@ export default async function RequestDetailPage({
   const request = await getRequestById(supabase, id);
   if (!request) notFound();
 
-  const [{ data: history }] = await Promise.all([
+  const uploadedByIds = Array.from(
+    new Set(
+      (request.request_attachments as Attachment[])
+        .map((a) => a.uploaded_by)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const [{ data: history }, { data: uploaderProfiles }, { data: securityStaff }] = await Promise.all([
     supabase
       .from("request_status_history")
       .select("id,old_status,new_status,note,created_at,changed_by_profile:profiles!changed_by(display_name)")
       .eq("request_id", id)
       .order("created_at", { ascending: true }),
+    uploadedByIds.length
+      ? supabase.from("profiles").select("id,display_name").in("id", uploadedByIds)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("profiles")
+      .select("id,display_name")
+      .eq("role", "security_staff")
+      .eq("is_active", true)
+      .order("display_name", { ascending: true }),
   ]);
 
   const attachments = request.request_attachments as Attachment[];
   const signed = await getSignedUrls(attachments);
+  const uploaderById = Object.fromEntries(
+    (uploaderProfiles ?? []).map((p) => [p.id, p.display_name]),
+  );
+  const signPayloads = buildAdminSecuritySignPayloads(request);
 
   const grouped = (t: FileType) => attachments.filter((a) => a.file_type === t);
 
@@ -90,6 +112,8 @@ export default async function RequestDetailPage({
         id={id}
         status={request.status}
         readOnly={!canWrite}
+        securityStaff={securityStaff ?? []}
+        assignedTo={request.assigned_to}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -160,10 +184,17 @@ export default async function RequestDetailPage({
             completion={grouped("completion_photo")}
             cancellation={grouped("cancellation_evidence")}
             signed={signed}
+            uploaderById={uploaderById}
           />
         </div>
 
         <div className="space-y-6">
+          <AdminSecuritySignPanel
+            requestId={id}
+            payloads={signPayloads}
+            metadata={request.metadata}
+          />
+
           {(request.assigned_to_profile || request.completed_at || request.cancellation_reason) && (
             <Card>
               <CardHeader><CardTitle className="text-base">ข้อมูลการดำเนินงาน</CardTitle></CardHeader>
@@ -238,6 +269,7 @@ function AttachmentsCard({
   completion,
   cancellation,
   signed,
+  uploaderById,
 }: {
   requestId: string;
   canUpload: boolean;
@@ -246,21 +278,57 @@ function AttachmentsCard({
   completion: Attachment[];
   cancellation: Attachment[];
   signed: Record<string, string>;
+  uploaderById: Record<string, string>;
 }) {
   return (
     <Card>
       <CardHeader><CardTitle className="text-base">{TH.entity.attachment}</CardTitle></CardHeader>
       <CardContent className="space-y-5">
-        <AttachGroup type="official_letter" items={officialLetters} signed={signed} requestId={requestId} canUpload={canUpload} />
+        <AttachGroup
+          type="official_letter"
+          items={officialLetters}
+          signed={signed}
+          requestId={requestId}
+          canUpload={canUpload}
+          uploaderById={uploaderById}
+        />
         <Separator />
         <div>
-          <p className="mb-3 text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>
-          <CompletionPhotoGallery items={completion} signedSupabaseUrls={signed} />
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>
+            {canUpload ? (
+              <AttachmentUploader
+                requestId={requestId}
+                fileType="completion_photo"
+                label={TH.action.attachCompletionPhoto}
+                multiple
+              />
+            ) : null}
+          </div>
+          <CompletionPhotoGallery
+            items={completion}
+            signedSupabaseUrls={signed}
+            uploaderById={uploaderById}
+          />
         </div>
         <Separator />
-        <AttachGroup type="cancellation_evidence" items={cancellation} signed={signed} requestId={requestId} canUpload={canUpload} />
+        <AttachGroup
+          type="cancellation_evidence"
+          items={cancellation}
+          signed={signed}
+          requestId={requestId}
+          canUpload={canUpload}
+          uploaderById={uploaderById}
+        />
         <Separator />
-        <AttachGroup type="general_attachment" items={general} signed={signed} requestId={requestId} canUpload={canUpload} />
+        <AttachGroup
+          type="general_attachment"
+          items={general}
+          signed={signed}
+          requestId={requestId}
+          canUpload={canUpload}
+          uploaderById={uploaderById}
+        />
       </CardContent>
     </Card>
   );
@@ -272,47 +340,26 @@ function AttachGroup({
   signed,
   requestId,
   canUpload,
+  uploaderById,
 }: {
   type: FileType;
   items: Attachment[];
   signed: Record<string, string>;
   requestId: string;
   canUpload: boolean;
+  uploaderById: Record<string, string>;
 }) {
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH[type]}</p>
-        {canUpload ? (
+    <AttachmentPreviewSection
+      label={FILE_TYPE_LABELS_TH[type]}
+      items={items}
+      signedSupabaseUrls={signed}
+      uploaderById={uploaderById}
+      upload={
+        canUpload ? (
           <AttachmentUploader requestId={requestId} fileType={type} label="แนบไฟล์" />
-        ) : null}
-      </div>
-      {items.length ? (
-        <ul className="space-y-1.5">
-          {items.map((a) => {
-            const url = resolveAttachmentViewUrl(a, signed);
-            const isImage = a.mime_type?.startsWith("image/");
-            return (
-              <li key={a.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2 truncate">
-                  {isImage ? <ImageIcon className="h-4 w-4 text-muted-foreground" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
-                  <span className="truncate">{a.file_name}</span>
-                  <span className="text-xs text-muted-foreground">{formatBytes(a.file_size)}</span>
-                </span>
-                {url ? (
-                  <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                    <Download className="h-4 w-4" /> เปิด
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Paperclip className="h-3.5 w-3.5" /> ยังไม่มีไฟล์
-        </p>
-      )}
-    </div>
+        ) : undefined
+      }
+    />
   );
 }

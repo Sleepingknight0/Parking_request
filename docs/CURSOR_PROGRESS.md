@@ -1,5 +1,31 @@
 # Cursor Progress
 
+## 2026-06-25 - Codex parity: admin evidence preview + sign tools
+
+### Added
+
+- Admin request detail now previews attachments inline like the User app:
+  - images open in an in-page dialog
+  - PDFs open in an in-page dialog
+  - DOC/DOCX still open in a new tab because browser inline preview is not reliable
+- Admin can upload completion photos from request detail.
+- Admin completion-photo upload supports multiple images at once and server-side validation restricts completion evidence to JPG/PNG/WebP.
+- Attachment preview cards can show uploader names when profile data is available.
+- Admin request detail now has a cone-sign panel:
+  - preview signs on screen without downloading files
+  - switch between print and handwrite styles
+  - open printable/PDF sign route at `/requests/[id]/signs/print`
+- Admin can now assign approved work to active `security_staff` and reassign active assigned/in-progress work.
+- Copied `THSarabunIT9.ttf` into the admin app so printed signs render like the User app.
+
+### Verification
+
+- `pnpm --filter @nacc/admin lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm --filter @nacc/admin build` passed.
+- `pnpm --filter @nacc/user build` passed.
+- Restarted local dev servers on ports 3000 and 3001; both roots return 200 without `Application error`.
+
 ## 2026-06-25 — Admin production UI parity (ฝั่ง User)
 
 - **Dashboard** (`admin-dashboard-content.tsx`): layout แบบ officer — stat 6 ช่อง (3 คอลัมน์), ปฏิทินด่วน 3 วัน + งานที่ต้องจัดการ (max 10 รายการ), ส่วนวิเคราะห์แยกด้านล่าง
@@ -531,7 +557,7 @@
 
 ### Remaining
 
-- [ ] Merge latest `supabase-env` into `main` if production should include commits after PR #2.
+- [x] Merge `supabase-env` into `main` และลบ branch แล้ว (2026-06-25)
 - [ ] Add Supabase Auth redirect URLs for both Vercel domains.
 - [ ] Optional: delete unused Vercel projects (`user`, `parking-request-admin`).
 
@@ -639,3 +665,17 @@
 
 - `pnpm typecheck` — pass
 - `pnpm lint` — pass
+
+## 2026-06-25 — ปิด bypass login ผู้ดูแลจาก user app
+
+### Done
+
+- การ์ด **ผู้ดูแลสูงสุด** บนหน้าแรก user app → redirect ไป `{ADMIN_APP_URL}/login` แทน silent sign-in
+- ลบ `/api/auth/demo-enter` ออกจาก admin app
+- ปรับข้อความหน้าเลือกบทบาท: ผู้ดูแลระบบต้องล็อกอิน
+- ลบ `ADMIN_DEMO_*` จาก `.env.example` (ไม่ใช้แล้ว)
+
+### Checks
+
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass

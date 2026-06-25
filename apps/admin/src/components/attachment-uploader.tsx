@@ -11,26 +11,35 @@ export function AttachmentUploader({
   requestId,
   fileType,
   label,
+  multiple = false,
 }: {
   requestId: string;
   fileType: FileType;
   label?: string;
+  multiple?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   async function onChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.set("file", file);
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
     setPending(true);
     try {
-      const res = await uploadAttachment(requestId, fileType, fd);
-      if (!res.ok) toast.error(res.error ?? "อัปโหลดไม่สำเร็จ");
-      else {
-        toast.success("อัปโหลดไฟล์แล้ว");
+      let uploaded = 0;
+      for (const file of files) {
+        const fd = new FormData();
+        fd.set("file", file);
+        const res = await uploadAttachment(requestId, fileType, fd);
+        if (!res.ok) {
+          toast.error(res.error ?? "อัปโหลดไม่สำเร็จ");
+          continue;
+        }
+        uploaded += 1;
+      }
+      if (uploaded > 0) {
+        toast.success(uploaded === 1 ? "อัปโหลดไฟล์แล้ว" : `อัปโหลดไฟล์แล้ว ${uploaded} ไฟล์`);
         router.refresh();
       }
     } finally {
@@ -45,7 +54,8 @@ export function AttachmentUploader({
         ref={inputRef}
         type="file"
         className="hidden"
-        accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+        accept={fileType === "completion_photo" ? ".jpg,.jpeg,.png,.webp" : ".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"}
+        multiple={multiple}
         onChange={onChange}
       />
       <Button

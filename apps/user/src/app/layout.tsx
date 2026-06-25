@@ -14,6 +14,10 @@ const fontSans = IBM_Plex_Sans_Thai({
 export const metadata: Metadata = {
   title: `${TH.app.userName} | ${TH.app.name}`,
   description: "ระบบบันทึกและติดตามคำขอที่จอดรถสำหรับเจ้าหน้าที่และงาน รปภ.",
+  icons: {
+    icon: "/nacc-logo.png",
+    apple: "/nacc-logo.png",
+  },
 };
 
 export default function RootLayout({

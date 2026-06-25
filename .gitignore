@@ -38,5 +38,12 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 *.log
+debug-*.log
+
+# Local scratch / agent tooling (never commit)
+.superpowers/
+jh.txt
+jw.txt
+*.cookie
 
 .vercel
