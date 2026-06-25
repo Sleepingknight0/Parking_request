@@ -30,7 +30,7 @@ import {
 } from "@nacc/ui";
 import { ROLE_LABELS_TH, TH, type Role } from "@nacc/types";
 import { initials } from "@nacc/utils";
-import { AdminManualRefresh } from "./admin-manual-refresh";
+import { AutoRefresh } from "./auto-refresh";
 
 interface NavItem {
   href: string;
@@ -171,8 +171,8 @@ export function AppShell({
             <Menu className="h-5 w-5" />
           </Button>
 
-          <div className="ml-auto flex items-center gap-1">
-            <AdminManualRefresh />
+          <div className="ml-auto flex items-center gap-2">
+            <AutoRefresh intervalMs={5000} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2 px-2">
