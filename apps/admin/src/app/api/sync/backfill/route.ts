@@ -20,7 +20,6 @@ import {
   getAllSheetRows,
   updateSheetRow,
   ensureSheetHeader,
-  initSheetFormat,
   isSheetsConfigured,
   googleSheetsId,
   googleSheetsTabName,
@@ -29,80 +28,82 @@ import { LIVE_SHEET_HEADERS, thaiNumeralsToArabic } from "@nacc/utils";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const denied = await authorizeSyncRequest(req);
-  if (denied) return denied;
+  try {
+    const denied = await authorizeSyncRequest(req);
+    if (denied) return denied;
 
-  if (!isSheetsConfigured()) {
-    return NextResponse.json(
-      { error: "Google Sheets not configured" },
-      { status: 503 },
-    );
-  }
-
-  const supabase = createServiceClient();
-  const spreadsheetId = googleSheetsId()!;
-  const sheetName = googleSheetsTabName();
-
-  // ── Write header + apply full sheet design ────────────────────────────────
-  await ensureSheetHeader(spreadsheetId, sheetName, [...LIVE_SHEET_HEADERS]);
-  await initSheetFormat(spreadsheetId, sheetName);
-
-  // ── Read all sheet rows ───────────────────────────────────────────────────
-  const sheetRows = await getAllSheetRows(spreadsheetId, sheetName);
-
-  const results = {
-    total: sheetRows.length,
-    matched: 0,
-    skipped: 0,
-    errors: [] as string[],
-  };
-
-  for (const { rowNumber, values } of sheetRows) {
-    const rawLetterNo = values[2]?.trim();
-    // Normalize Thai numerals (e.g. ๐๓๐๒ → 0302) and skip empty/dash rows
-    const letterNo = rawLetterNo ? thaiNumeralsToArabic(rawLetterNo) : "";
-    if (!letterNo || letterNo === "-") {
-      results.skipped++;
-      continue;
+    if (!isSheetsConfigured()) {
+      return NextResponse.json(
+        { error: "Google Sheets not configured" },
+        { status: 503 },
+      );
     }
 
-    // Look up by official_letter_no — try exact match first, then ilike
-    const { data: match } = await supabase
-      .from("parking_requests")
-      .select("id, request_no, status, sheet_row")
-      .or(`official_letter_no.eq.${letterNo},official_letter_no.ilike.${letterNo}`)
-      .maybeSingle();
+    const supabase = createServiceClient();
+    const spreadsheetId = googleSheetsId()!;
+    const sheetName = googleSheetsTabName();
 
-    if (!match) {
-      results.skipped++;
-      continue;
-    }
+    // Header only — skip heavy formatting (initSheetFormat) to avoid Vercel timeout.
+    await ensureSheetHeader(spreadsheetId, sheetName, [...LIVE_SHEET_HEADERS]);
 
-    // Write sheet_row to Supabase (only if not already set or if different)
-    if (!match.sheet_row || match.sheet_row !== rowNumber) {
-      await supabase
+    const sheetRows = await getAllSheetRows(spreadsheetId, sheetName);
+
+    const results = {
+      total: sheetRows.length,
+      matched: 0,
+      skipped: 0,
+      errors: [] as string[],
+    };
+
+    for (const { rowNumber, values } of sheetRows) {
+      const rawLetterNo = values[2]?.trim();
+      const letterNo = rawLetterNo ? thaiNumeralsToArabic(rawLetterNo) : "";
+      if (!letterNo || letterNo === "-") {
+        results.skipped++;
+        continue;
+      }
+
+      const { data: match } = await supabase
         .from("parking_requests")
-        .update({ sheet_row: rowNumber, sheet_synced_at: new Date().toISOString() })
-        .eq("id", match.id);
+        .select("id, request_no, status, sheet_row")
+        .or(`official_letter_no.eq.${letterNo},official_letter_no.ilike.${letterNo}`)
+        .maybeSingle();
+
+      if (!match) {
+        results.skipped++;
+        continue;
+      }
+
+      if (!match.sheet_row || match.sheet_row !== rowNumber) {
+        await supabase
+          .from("parking_requests")
+          .update({ sheet_row: rowNumber, sheet_synced_at: new Date().toISOString() })
+          .eq("id", match.id);
+      }
+
+      const fullRow = [...values];
+      while (fullRow.length < 11) fullRow.push("");
+      fullRow[8] =
+        STATUS_LABELS_TH[match.status as keyof typeof STATUS_LABELS_TH] ?? match.status;
+      fullRow[9] = match.request_no;
+      fullRow[10] = match.id;
+
+      try {
+        await updateSheetRow(spreadsheetId, sheetName, rowNumber, fullRow);
+        results.matched++;
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        results.errors.push(`row ${rowNumber}: ${message}`);
+      }
     }
 
-    // Write I, J, K columns to the sheet row (preserve A-H)
-    const fullRow = [...values];
-    while (fullRow.length < 11) fullRow.push("");
-    fullRow[8] =
-      STATUS_LABELS_TH[match.status as keyof typeof STATUS_LABELS_TH] ?? match.status;
-    fullRow[9] = match.request_no;
-    fullRow[10] = match.id;
-
-    try {
-      await updateSheetRow(spreadsheetId, sheetName, rowNumber, fullRow);
-      results.matched++;
-    } catch (e: any) {
-      results.errors.push(`row ${rowNumber}: ${e?.message}`);
-    }
+    return NextResponse.json({ ok: true, ...results });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[sync/backfill]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true, ...results });
 }

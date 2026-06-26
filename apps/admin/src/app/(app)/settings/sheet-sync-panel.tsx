@@ -29,10 +29,11 @@ export function SheetSyncPanel() {
         method: "POST",
         credentials: "same-origin",
       });
-      const data: SyncResult = await res.json();
+      const data = await parseSyncResponse(res);
       setResult({ type, data });
-    } catch (e: any) {
-      setResult({ type, data: { error: e.message } });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setResult({ type, data: { error: message } });
     } finally {
       setLoading(false);
     }
@@ -107,4 +108,26 @@ export function SheetSyncPanel() {
       </CardContent>
     </Card>
   );
+}
+
+async function parseSyncResponse(res: Response): Promise<SyncResult> {
+  const text = await res.text();
+  if (!text.trim()) {
+    return {
+      error:
+        res.status === 504
+          ? "เซิร์ฟเวอร์ใช้เวลานานเกินไป ลองอีกครั้งหรือลดจำนวนแถวใน Sheet"
+          : `เซิร์ฟเวอร์ตอบว่าง (HTTP ${res.status})`,
+    };
+  }
+
+  try {
+    const data = JSON.parse(text) as SyncResult;
+    if (!res.ok && !data.error) {
+      return { error: `HTTP ${res.status}` };
+    }
+    return data;
+  } catch {
+    return { error: `HTTP ${res.status}: ${text.slice(0, 240)}` };
+  }
 }

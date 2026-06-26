@@ -43,22 +43,23 @@ export async function POST(req: NextRequest) {
 }
 
 async function handlePoll(req: NextRequest) {
-  const denied = await authorizeSyncRequest(req);
-  if (denied) return denied;
+  try {
+    const denied = await authorizeSyncRequest(req);
+    if (denied) return denied;
 
-  if (!isSheetsConfigured()) {
-    return NextResponse.json({ error: "Google Sheets not configured" }, { status: 503 });
-  }
+    if (!isSheetsConfigured()) {
+      return NextResponse.json({ error: "Google Sheets not configured" }, { status: 503 });
+    }
 
-  const supabase      = createServiceClient();
-  const spreadsheetId = googleSheetsId()!;
-  const sheetName     = googleSheetsTabName();
+    const supabase      = createServiceClient();
+    const spreadsheetId = googleSheetsId()!;
+    const sheetName     = googleSheetsTabName();
 
-  const sheetRows = await getAllSheetRows(spreadsheetId, sheetName);
+    const sheetRows = await getAllSheetRows(spreadsheetId, sheetName);
 
-  const stats = { checked: 0, updated: 0, skipped: 0, errors: [] as string[] };
+    const stats = { checked: 0, updated: 0, skipped: 0, errors: [] as string[] };
 
-  for (const { rowNumber, values } of sheetRows) {
+    for (const { rowNumber, values } of sheetRows) {
     const id = values[COL_ID]?.trim();
     if (!id) { stats.skipped++; continue; }  // No UUID yet → skip
 
@@ -166,12 +167,18 @@ async function handlePoll(req: NextRequest) {
           message: `row ${rowNumber}: updated ${[...Object.keys(changed), dateChanged ? "date" : "", timeChanged ? "time" : ""].filter(Boolean).join(", ")}`,
         });
       }
-    } catch (e: any) {
-      stats.errors.push(`row ${rowNumber}: ${e?.message}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      stats.errors.push(`row ${rowNumber}: ${message}`);
     }
   }
 
-  return NextResponse.json({ ok: true, ...stats });
+    return NextResponse.json({ ok: true, ...stats });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[sync/poll]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 /** Converts DD/MM/YYYY or YYYY-MM-DD → YYYY-MM-DD. Returns "" if unparseable. */
