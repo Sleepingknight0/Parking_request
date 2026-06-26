@@ -27,7 +27,7 @@ export function SheetSyncPanel() {
     try {
       const res = await fetch(path, {
         method: "POST",
-        headers: { "x-sync-secret": getSyncSecret() },
+        credentials: "same-origin",
       });
       const data: SyncResult = await res.json();
       setResult({ type, data });
@@ -48,7 +48,7 @@ export function SheetSyncPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          ระบบซิงก์อัตโนมัติทุก 5 นาที (Vercel Cron) — หรือกดปุ่มด้านล่างเพื่อซิงก์ทันที
+          ซิงก์อัตโนมัติทุกวัน 09:00 น. (Vercel Cron) — หรือกดปุ่มด้านล่างเพื่อซิงก์ทันที
         </p>
 
         <div className="flex flex-wrap gap-3">
@@ -107,11 +107,4 @@ export function SheetSyncPanel() {
       </CardContent>
     </Card>
   );
-}
-
-function getSyncSecret(): string {
-  // In dev the secret is in .env.local; in prod it comes from Vercel env.
-  // This client-side call is safe because /api/sync/* also accept session-cookie auth
-  // when no secret is set — but we pass it for clarity during development.
-  return "change-me-before-deploy";
 }

@@ -45,7 +45,7 @@ In the Google Cloud Console for project `nacc-parking-streamlit`:
 ### 3. Verify env vars in apps/admin/.env.local
 
 ```env
-GOOGLE_SHEETS_ID=1AyMAJvyRYlqh_bpSp804CZOBCTlBFa55x7wVSLY-mXs
+GOOGLE_SHEETS_ID=1OxrxKBKNTRb3vMBPA-91i-E1KIGB52RTZ31si2OaKz0
 GOOGLE_SHEETS_TAB_NAME=ชีต1
 SYNC_WEBHOOK_SECRET=change-me-before-deploy   # ← CHANGE THIS
 GOOGLE_DRIVE_CLIENT_EMAIL=nacc-parking-streamlit@...
@@ -207,7 +207,7 @@ Supabase wins on conflict. Sheet edits flow immediately to Supabase; if Supabase
 ## Vercel deploy env vars (admin app)
 
 ```
-GOOGLE_SHEETS_ID=1AyMAJvyRYlqh_bpSp804CZOBCTlBFa55x7wVSLY-mXs
+GOOGLE_SHEETS_ID=1OxrxKBKNTRb3vMBPA-91i-E1KIGB52RTZ31si2OaKz0
 GOOGLE_SHEETS_TAB_NAME=ชีต1
 SYNC_WEBHOOK_SECRET=<random-strong-secret>
 GOOGLE_DRIVE_CLIENT_EMAIL=nacc-parking-streamlit@nacc-parking-streamlit.iam.gserviceaccount.com

@@ -24,20 +24,15 @@ import {
   isSheetsConfigured,
   googleSheetsId,
   googleSheetsTabName,
-  syncWebhookSecret,
 } from "@nacc/storage";
 import { LIVE_SHEET_HEADERS, thaiNumeralsToArabic } from "@nacc/utils";
+import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  const secret = syncWebhookSecret();
-  if (secret) {
-    if (req.headers.get("x-sync-secret") !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const denied = await authorizeSyncRequest(req);
+  if (denied) return denied;
 
   if (!isSheetsConfigured()) {
     return NextResponse.json(

@@ -17,9 +17,9 @@ import {
   isSheetsConfigured,
   googleSheetsId,
   googleSheetsTabName,
-  syncWebhookSecret,
 } from "@nacc/storage";
 import { thaiNumeralsToArabic, parseTimeRange } from "@nacc/utils";
+import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Vercel: allow up to 60 s for large sheets
@@ -43,17 +43,8 @@ export async function POST(req: NextRequest) {
 }
 
 async function handlePoll(req: NextRequest) {
-  // ── Auth ─────────────────────────────────────────────────────────────────
-  // Vercel Cron sends Authorization: Bearer <CRON_SECRET>; manual calls use x-sync-secret
-  const secret = syncWebhookSecret();
-  if (secret) {
-    const syncHeader  = req.headers.get("x-sync-secret");
-    const cronHeader  = req.headers.get("authorization");
-    const cronToken   = cronHeader?.replace("Bearer ", "");
-    if (syncHeader !== secret && cronToken !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const denied = await authorizeSyncRequest(req);
+  if (denied) return denied;
 
   if (!isSheetsConfigured()) {
     return NextResponse.json({ error: "Google Sheets not configured" }, { status: 503 });
