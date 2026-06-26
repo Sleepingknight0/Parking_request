@@ -14,9 +14,9 @@ import {
   appendSheetRow,
   updateSheetRow,
   ensureSheetHeader,
+  resolveSheetTabName,
   isSheetsConfigured,
   googleSheetsId,
-  googleSheetsTabName,
   syncWebhookSecret,
 } from "@nacc/storage";
 import {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceClient();
   const spreadsheetId = googleSheetsId()!;
-  const sheetName = googleSheetsTabName();
+  const sheetName = await resolveSheetTabName(spreadsheetId);
 
   // ── Fetch full request with joins ─────────────────────────────────────────
   const { data: req_, error: fetchErr } = await supabase

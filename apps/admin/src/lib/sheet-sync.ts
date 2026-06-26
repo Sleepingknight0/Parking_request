@@ -11,9 +11,9 @@ import {
   appendSheetRow,
   updateSheetRow,
   ensureSheetHeader,
+  resolveSheetTabName,
   isSheetsConfigured,
   googleSheetsId,
-  googleSheetsTabName,
 } from "@nacc/storage";
 import { buildLiveSheetRow, formatTimeThDot, LIVE_SHEET_HEADERS, type LiveSheetRequest } from "@nacc/utils";
 
@@ -23,7 +23,7 @@ export async function syncRequestToSheet(requestId: string): Promise<void> {
   try {
     const supabase = createServiceClient();
     const spreadsheetId = googleSheetsId()!;
-    const sheetName = googleSheetsTabName();
+    const sheetName = await resolveSheetTabName(spreadsheetId);
 
     const { data: r } = await supabase
       .from("parking_requests")

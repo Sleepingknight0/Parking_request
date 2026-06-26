@@ -14,9 +14,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@nacc/db/service";
 import {
   getAllSheetRows,
+  resolveSheetTabName,
   isSheetsConfigured,
   googleSheetsId,
-  googleSheetsTabName,
 } from "@nacc/storage";
 import { thaiNumeralsToArabic, parseTimeRange } from "@nacc/utils";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
@@ -53,7 +53,7 @@ async function handlePoll(req: NextRequest) {
 
     const supabase      = createServiceClient();
     const spreadsheetId = googleSheetsId()!;
-    const sheetName     = googleSheetsTabName();
+    const sheetName     = await resolveSheetTabName(spreadsheetId);
 
     const sheetRows = await getAllSheetRows(spreadsheetId, sheetName);
 

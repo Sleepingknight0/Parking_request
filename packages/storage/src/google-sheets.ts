@@ -5,7 +5,7 @@
  */
 import "server-only";
 import { google } from "googleapis";
-import { googleDriveClientEmail, googleDrivePrivateKey } from "./env";
+import { googleDriveClientEmail, googleDrivePrivateKey, googleSheetsGid, googleSheetsTabName } from "./env";
 
 // ─── Sheet layout (must match LIVE_SHEET_* in @nacc/utils) ───────────────────
 // A  วันที่รับเรื่อง  B สำนัก  C เลขหนังสือ  D วันที่จอด  E เวลาที่จอด
@@ -30,6 +30,58 @@ function sheetsClient() {
   return google.sheets({ version: "v4", auth });
 }
 
+/** A1 notation with quoted sheet title (required for Thai / special names). */
+export function sheetA1Range(sheetName: string, cellRange: string): string {
+  const escaped = sheetName.replace(/'/g, "''");
+  if (/^[A-Za-z0-9_]+$/.test(sheetName)) {
+    return `${sheetName}!${cellRange}`;
+  }
+  return `'${escaped}'!${cellRange}`;
+}
+
+const tabNameCache = new Map<string, string>();
+
+/**
+ * Resolves the live tab title from the spreadsheet.
+ * Uses GOOGLE_SHEETS_GID first (avoids UTF-8 env corruption on Vercel).
+ */
+export async function resolveSheetTabName(spreadsheetId: string): Promise<string> {
+  const cached = tabNameCache.get(spreadsheetId);
+  if (cached) return cached;
+
+  const sheets = sheetsClient();
+  const info = await sheets.spreadsheets.get({ spreadsheetId });
+  const all = info.data.sheets ?? [];
+
+  const gid = Number(googleSheetsGid());
+  if (!Number.isNaN(gid)) {
+    const byGid = all.find((s) => s.properties?.sheetId === gid);
+    if (byGid?.properties?.title) {
+      tabNameCache.set(spreadsheetId, byGid.properties.title);
+      return byGid.properties.title;
+    }
+  }
+
+  const configured = googleSheetsTabName();
+  if (!configured.includes("?")) {
+    const byName = all.find((s) => s.properties?.title === configured);
+    if (byName?.properties?.title) {
+      tabNameCache.set(spreadsheetId, byName.properties.title);
+      return byName.properties.title;
+    }
+  }
+
+  const first = all[0]?.properties?.title;
+  if (first) {
+    tabNameCache.set(spreadsheetId, first);
+    return first;
+  }
+
+  throw new Error(
+    `ไม่พบแท็บใน Google Sheet (GID=${googleSheetsGid()}, ชื่อที่ตั้งไว้=${configured})`,
+  );
+}
+
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 /** Reads a specific row (1-based). Returns raw string array from the sheet. */
@@ -41,7 +93,7 @@ export async function getSheetRow(
   const sheets = sheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A${rowNumber}:K${rowNumber}`,
+    range: sheetA1Range(sheetName, `A${rowNumber}:K${rowNumber}`),
   });
   return (res.data.values?.[0] as string[] | undefined) ?? [];
 }
@@ -57,7 +109,7 @@ export async function getAllSheetRows(
   const sheets = sheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A2:K`,
+    range: sheetA1Range(sheetName, "A2:K"),
   });
   const raw = (res.data.values ?? []) as string[][];
   return raw.map((values, i) => ({ rowNumber: i + 2, values }));
@@ -74,7 +126,7 @@ export async function appendSheetRow(
   const sheets = sheetsClient();
   const res = await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: `${sheetName}!A:K`,
+    range: sheetA1Range(sheetName, "A:K"),
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [values] },
@@ -95,7 +147,7 @@ export async function updateSheetRow(
   const sheets = sheetsClient();
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `${sheetName}!A${rowNumber}:K${rowNumber}`,
+    range: sheetA1Range(sheetName, `A${rowNumber}:K${rowNumber}`),
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [values] },
   });
@@ -110,14 +162,14 @@ export async function ensureSheetHeader(
   const sheets = sheetsClient();
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A1:K1`,
+    range: sheetA1Range(sheetName, "A1:K1"),
   });
   const current = (existing.data.values?.[0] as string[] | undefined) ?? [];
   const upToDate = headers.every((h, i) => current[i] === h);
   if (upToDate) return;
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `${sheetName}!A1:K1`,
+    range: sheetA1Range(sheetName, "A1:K1"),
     valueInputOption: "RAW",
     requestBody: { values: [headers] },
   });

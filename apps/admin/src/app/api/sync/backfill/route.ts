@@ -20,9 +20,9 @@ import {
   getAllSheetRows,
   updateSheetRow,
   ensureSheetHeader,
+  resolveSheetTabName,
   isSheetsConfigured,
   googleSheetsId,
-  googleSheetsTabName,
 } from "@nacc/storage";
 import { LIVE_SHEET_HEADERS, thaiNumeralsToArabic } from "@nacc/utils";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient();
     const spreadsheetId = googleSheetsId()!;
-    const sheetName = googleSheetsTabName();
+    const sheetName = await resolveSheetTabName(spreadsheetId);
 
     // Header only — skip heavy formatting (initSheetFormat) to avoid Vercel timeout.
     await ensureSheetHeader(spreadsheetId, sheetName, [...LIVE_SHEET_HEADERS]);

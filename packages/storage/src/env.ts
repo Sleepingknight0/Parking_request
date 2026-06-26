@@ -38,6 +38,11 @@ export function googleSheetsTabName(): string {
   return process.env.GOOGLE_SHEETS_TAB_NAME?.trim() || "ชีต1";
 }
 
+/** Sheet gid from the spreadsheet URL (#gid=0). Preferred over tab name on Vercel. */
+export function googleSheetsGid(): string {
+  return process.env.GOOGLE_SHEETS_GID?.trim() || "0";
+}
+
 export function syncWebhookSecret(): string | undefined {
   return process.env.SYNC_WEBHOOK_SECRET?.trim() || undefined;
 }
