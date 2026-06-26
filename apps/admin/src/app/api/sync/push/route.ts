@@ -25,6 +25,7 @@ import {
   LIVE_SHEET_HEADERS,
   type LiveSheetRequest,
 } from "@nacc/utils";
+import { removeRequestFromSheet } from "@/lib/sheet-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,19 @@ export async function POST(req: NextRequest) {
   // Supabase webhook sends { type, table, record, old_record, schema }
   // Direct internal calls send { request_id }
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  // Supabase DELETE webhook → remove the row from the Sheet and re-index the
+  // records below it.  The deleted row is gone from the DB, so `record` is null
+  // and the id lives in `old_record`.
+  if (body.type === "DELETE") {
+    const oldId = (body.old_record as Record<string, string> | undefined)?.id;
+    if (!oldId) {
+      return NextResponse.json({ error: "Missing old record id" }, { status: 400 });
+    }
+    await removeRequestFromSheet(oldId);
+    return NextResponse.json({ ok: true, deleted: oldId });
+  }
+
   const requestId: string | undefined =
     (body.record as Record<string, string> | undefined)?.id ??
     (body.request_id as string | undefined);

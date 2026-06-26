@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@nacc/db/server";
-import { syncRequestToSheet } from "./sheet-sync";
+import { syncRequestToSheet, removeRequestFromSheet } from "./sheet-sync";
 import { createServiceClient } from "@nacc/db/service";
 import { hasSupabaseServiceKey, SUPABASE_SERVICE_KEY_ERROR_TH } from "@nacc/db";
 import { requireProfile } from "@nacc/auth/guards";
@@ -433,5 +433,6 @@ export async function deleteRequest(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message };
   await logActivity("request.delete", id, profile.id);
   revalidatePath("/requests");
+  void removeRequestFromSheet(id);
   return { ok: true };
 }

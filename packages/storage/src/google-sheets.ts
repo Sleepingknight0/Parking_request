@@ -392,3 +392,73 @@ export async function initSheetFormat(
     requestBody: { requests },
   });
 }
+
+// ─── Delete ─────────────────────────────────────────────────────────────────
+
+/**
+ * Deletes the data row whose column K (Supabase UUID) matches `uuid`.
+ *
+ * The row is located by reading column K *live* — never trust a cached
+ * `sheet_row`, which may be stale.  The match is removed with `deleteDimension`,
+ * which physically deletes the row and shifts every row below it up by one.
+ *
+ * Returns the 1-based row number that was deleted, or `null` if no row matched
+ * (already gone).  Callers MUST re-index any stored row numbers greater than the
+ * returned value, since those records have shifted up by one.
+ */
+export async function deleteSheetRowByUuid(
+  spreadsheetId: string,
+  sheetName: string,
+  uuid: string,
+): Promise<number | null> {
+  const target = (uuid ?? "").trim();
+  if (!target) return null;
+
+  const sheets = sheetsClient();
+
+  // Resolve the numeric sheetId for this tab (deleteDimension needs it).
+  const info = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheetMeta = info.data.sheets?.find(
+    (s) => s.properties?.title === sheetName,
+  );
+  if (!sheetMeta) return null;
+  const sheetId = sheetMeta.properties?.sheetId ?? 0;
+
+  // Scan column K from the first data row downward.
+  const firstDataRow = SHEET_HEADER_ROW + 1;
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!K${firstDataRow}:K`,
+  });
+  const col = (res.data.values ?? []) as string[][];
+
+  let rowNumber = -1;
+  for (let i = 0; i < col.length; i++) {
+    if ((col[i]?.[0] ?? "").trim() === target) {
+      rowNumber = i + firstDataRow;
+      break;
+    }
+  }
+  if (rowNumber < 0) return null; // not in the sheet — nothing to delete
+  if (rowNumber <= SHEET_HEADER_ROW) return null; // never touch the header
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: rowNumber - 1, // 0-based, inclusive
+              endIndex: rowNumber, //        exclusive
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  return rowNumber;
+}
