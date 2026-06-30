@@ -9,7 +9,7 @@ import {
   CardTitle,
   StatusBadge,
 } from "@nacc/ui";
-import type { ParkingRequestListItem, RequestStatus } from "@nacc/types";
+import { FEATURE_FLAGS, type ParkingRequestListItem, type RequestStatus } from "@nacc/types";
 import { formatThaiDate, formatTimeRange } from "@nacc/utils";
 import { CommsVerificationBadge } from "./comms-verification-badge";
 import {
@@ -80,7 +80,7 @@ export function DashboardRequestPanel({
             <StatusBadge status={request.status as RequestStatus} />
             {showCommsVerification ? <CommsVerificationBadge request={request} /> : null}
           </div>
-          {request.officialLetterCount === 0 ? (
+          {FEATURE_FLAGS.officialLetterIndicators && request.officialLetterCount === 0 ? (
             <span className="text-xs font-medium text-amber-700">{missingLetterLabel}</span>
           ) : null}
         </div>

@@ -679,3 +679,63 @@
 
 - `pnpm lint` — pass
 - `pnpm typecheck` — pass
+
+## 2026-06-25 — ปิดฟีเจอร์แนบหนังสือ/ผู้ประสานงาน + dropdown ขั้นตอนเอกสาร
+
+### Done
+
+- `packages/types/src/feature-flags.ts` — ปิดชั่วคราว (โค้ดยังอยู่):
+  - `officialLetterAttachments`
+  - `officialLetterRequired`
+  - `officialLetterIndicators`
+  - `contactFields`
+- ซ่อน UI แนบไฟล์หนังสือราชการ, badge/บังคับแนบไฟล์, ฟิลด์ผู้ประสานงาน/เบอร์โทร ทุกฝั่ง admin / officer / comms (รปภ. ยังแนบรูปส่งงานได้ตามเดิม)
+- Dropdown **ขั้นตอนเอกสาร** 5 ขั้น (map สถานะ DB เดิม):
+  1. รออนุมัติ → `under_review` / `submitted`
+  2. อนุมัติแล้ว → `approved`
+  3. รอดำเนินการ → `assigned`
+  4. ยืนยันการจัดที่จอดรถ → `in_progress`
+  5. เสร็จสิ้น → `completed`
+- ฟอร์มสร้างคำขอ (admin / officer / comms): เลือกขั้นตอนก่อนส่ง
+- หน้ารายละเอียด (admin / officer / comms): แก้ไขขั้นตอนใน panel ประวัติ
+- `walkToDocumentProgress` — เดิน transition ทีละขั้นตาม DB trigger
+- ฝั่ง รปภ. **ไม่มี** dropdown ขั้นตอน (ตามที่ขอ)
+
+### Re-enable later
+
+ตั้งค่าใน `packages/types/src/feature-flags.ts` เป็น `true` เมื่อพร้อมใช้งาน
+
+### Checks
+
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass
+
+## 2026-06-25 — ปิดฟีเจอร์แนบหนังสือ/ผู้ประสานงาน + dropdown ขั้นตอนเอกสาร
+
+### Done
+
+- `packages/types/src/feature-flags.ts` — ปิดชั่วคราว (โค้ดยังอยู่):
+  - `officialLetterAttachments`
+  - `officialLetterRequired`
+  - `officialLetterIndicators`
+  - `contactFields`
+- ซ่อน UI แนบไฟล์หนังสือราชการ, badge/บังคับแนบไฟล์, ฟิลด์ผู้ประสานงาน/เบอร์โทร ทุกฝั่ง admin / officer / comms (รปภ. ยังแนบรูปส่งงานได้ตามเดิม)
+- Dropdown **ขั้นตอนเอกสาร** 5 ขั้น (map สถานะ DB เดิม):
+  1. รออนุมัติ → `under_review` / `submitted`
+  2. อนุมัติแล้ว → `approved`
+  3. รอดำเนินการ → `assigned`
+  4. ยืนยันการจัดที่จอดรถ → `in_progress`
+  5. เสร็จสิ้น → `completed`
+- ฟอร์มสร้างคำขอ (admin / officer / comms): เลือกขั้นตอนก่อนส่ง
+- หน้ารายละเอียด (admin / officer / comms): แก้ไขขั้นตอนในปanel ประวัติ
+- `walkToDocumentProgress` — เดิน transition ทีละขั้นตาม DB trigger
+- ฝั่ง รปภ. **ไม่มี** dropdown ขั้นตอน (ตามที่ขอ)
+
+### Re-enable later
+
+ตั้งค่าใน `packages/types/src/feature-flags.ts` เป็น `true` เมื่อพร้อมใช้งาน
+
+### Checks
+
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass

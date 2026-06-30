@@ -14,7 +14,7 @@ import {
   Textarea,
   toast,
 } from "@nacc/ui";
-import { TH, type ParkingRequestWithRelations } from "@nacc/types";
+import { FEATURE_FLAGS, TH, type ParkingRequestWithRelations } from "@nacc/types";
 import {
   commsApproveRequest,
   commsMarkUnderReview,
@@ -61,13 +61,13 @@ export function CommsRequestActions({
   const canDecide = request.status === "under_review" || request.status === "submitted";
   const canVerify =
     request.status === "completed" && !request.comms_verified_at;
-  const hasLetter = officialLetterCount > 0;
+  const hasLetter = FEATURE_FLAGS.officialLetterRequired ? officialLetterCount > 0 : true;
 
   if (!canReview && !canDecide && !canVerify) return null;
 
   return (
     <div className="space-y-3">
-      {canDecide && !hasLetter ? (
+      {FEATURE_FLAGS.officialLetterIndicators && canDecide && !hasLetter ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {TH.comms.needOfficialLetter}
         </p>

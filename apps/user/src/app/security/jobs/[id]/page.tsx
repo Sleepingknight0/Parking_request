@@ -13,6 +13,7 @@ import {
 } from "@nacc/ui";
 import {
   FILE_TYPE_LABELS_TH,
+  FEATURE_FLAGS,
   TH,
   type Attachment,
   type FileType,
@@ -91,8 +92,12 @@ export default async function SecurityJobDetailPage({
               <Info label={TH.entity.department} value={request.department?.name_th} />
               <Info label={TH.entity.letterDate} value={formatThaiDate(request.official_letter_date)} />
               <Info label={TH.entity.receivedDate} value={formatThaiDate(request.received_date)} />
-              <Info label={TH.entity.contactName} value={request.contact_name} />
-              <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+              {FEATURE_FLAGS.contactFields ? (
+                <>
+                  <Info label={TH.entity.contactName} value={request.contact_name} />
+                  <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                </>
+              ) : null}
               <Info label={TH.entity.subject} value={request.subject} className="sm:col-span-2" />
               <Info label={TH.entity.purpose} value={request.purpose} className="sm:col-span-2" />
             </CardContent>

@@ -18,6 +18,7 @@ import {
 } from "@nacc/ui";
 import {
   FILE_TYPE_LABELS_TH,
+  FEATURE_FLAGS,
   TH,
   type Attachment,
   type FileType,
@@ -132,8 +133,12 @@ export function CommsRequestDetailSheet({
                 />
                 <Info label={TH.entity.letterDate} value={formatThaiDate(request.official_letter_date)} />
                 <Info label={TH.entity.receivedDate} value={formatThaiDate(request.received_date)} />
-                <Info label={TH.entity.contactName} value={request.contact_name} />
-                <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                {FEATURE_FLAGS.contactFields ? (
+                  <>
+                    <Info label={TH.entity.contactName} value={request.contact_name} />
+                    <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                  </>
+                ) : null}
                 <Info label={TH.entity.carsCount} value={`${request.cars_count} คัน`} />
                 <Info label={TH.entity.assignedTo} value={request.assigned_to_profile?.display_name} />
               </div>
@@ -179,23 +184,25 @@ export function CommsRequestDetailSheet({
 
               <Separator />
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.official_letter}</p>
-                  <CommsAttachmentUploader
-                    requestId={request.id}
-                    fileType="official_letter"
-                    label="แนบหนังสือ"
-                    onUploaded={reload}
+              {FEATURE_FLAGS.officialLetterAttachments ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.official_letter}</p>
+                    <CommsAttachmentUploader
+                      requestId={request.id}
+                      fileType="official_letter"
+                      label="แนบหนังสือ"
+                      onUploaded={reload}
+                    />
+                  </div>
+                  <AttachmentPreviewSection
+                    label=""
+                    items={grouped("official_letter")}
+                    signedSupabaseUrls={signed}
+                    emptyMessage="ยังไม่แนบหนังสือราชการ"
                   />
                 </div>
-                <AttachmentPreviewSection
-                  label=""
-                  items={grouped("official_letter")}
-                  signedSupabaseUrls={signed}
-                  emptyMessage="ยังไม่แนบหนังสือราชการ"
-                />
-              </div>
+              ) : null}
 
               {grouped("general_attachment").length ? (
                 <AttachmentPreviewSection

@@ -15,6 +15,7 @@ import {
 } from "@nacc/ui";
 import {
   COMMS_STATUS_LEGEND,
+  FEATURE_FLAGS,
   TH,
   STATUS_LABELS_TH,
   type RequestStatus,
@@ -156,7 +157,7 @@ export function CommsRequestsList({
                             : "ยังไม่ระบุวันที่จอด"}{" "}
                           · {request.cars_count} คัน
                         </p>
-                        {request.officialLetterCount === 0 ? (
+                        {FEATURE_FLAGS.officialLetterIndicators && request.officialLetterCount === 0 ? (
                           <p className="text-xs font-medium text-amber-700">{TH.comms.missingLetter}</p>
                         ) : null}
                       </div>

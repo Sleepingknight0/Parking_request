@@ -17,6 +17,7 @@ import {
 } from "@nacc/ui";
 import {
   FILE_TYPE_LABELS_TH,
+  FEATURE_FLAGS,
   TH,
   type Attachment,
   type FileType,
@@ -140,8 +141,12 @@ export function OfficerRequestDetailSheet({
                 />
                 <Info label={TH.entity.letterDate} value={formatThaiDate(request.official_letter_date)} />
                 <Info label={TH.entity.receivedDate} value={formatThaiDate(request.received_date)} />
-                <Info label={TH.entity.contactName} value={request.contact_name} />
-                <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                {FEATURE_FLAGS.contactFields ? (
+                  <>
+                    <Info label={TH.entity.contactName} value={request.contact_name} />
+                    <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                  </>
+                ) : null}
                 <Info label={TH.entity.carsCount} value={`${request.cars_count} คัน`} />
               </div>
 
@@ -188,12 +193,14 @@ export function OfficerRequestDetailSheet({
 
               <Separator />
 
-              <AttachmentPreviewSection
-                label={FILE_TYPE_LABELS_TH.official_letter}
-                items={grouped("official_letter")}
-                signedSupabaseUrls={signed}
-                emptyMessage="ยังไม่แนบหนังสือราชการ"
-              />
+              {FEATURE_FLAGS.officialLetterAttachments ? (
+                <AttachmentPreviewSection
+                  label={FILE_TYPE_LABELS_TH.official_letter}
+                  items={grouped("official_letter")}
+                  signedSupabaseUrls={signed}
+                  emptyMessage="ยังไม่แนบหนังสือราชการ"
+                />
+              ) : null}
 
               {grouped("general_attachment").length ? (
                 <AttachmentPreviewSection

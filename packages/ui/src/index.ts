@@ -23,4 +23,5 @@ export * from "./components/sonner";
 export * from "./components/login-card";
 export * from "./components/completion-photo-gallery";
 export * from "./components/attachment-preview-gallery";
+export * from "./components/document-progress-editor";
 export * from "./components/request-search-toolbar";

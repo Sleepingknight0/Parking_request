@@ -214,6 +214,77 @@ export function nextStatuses(from: RequestStatus): RequestStatus[] {
   return STATUS_TRANSITIONS[from];
 }
 
+/* ───────────────────────── Document progress (UI stages) ───────────────────────── */
+
+/** Five user-facing workflow stages mapped to existing DB statuses. */
+export const DOCUMENT_PROGRESS_STATUSES = [
+  "under_review",
+  "approved",
+  "assigned",
+  "in_progress",
+  "completed",
+] as const;
+
+export type DocumentProgressStatus = (typeof DOCUMENT_PROGRESS_STATUSES)[number];
+
+export const DOCUMENT_PROGRESS_LABELS_TH: Record<DocumentProgressStatus, string> = {
+  under_review: "รออนุมัติ",
+  approved: "อนุมัติแล้ว",
+  assigned: "รอดำเนินการ",
+  in_progress: "ยืนยันการจัดที่จอดรถ",
+  completed: "เสร็จสิ้น",
+};
+
+/** Ordered path used when advancing status toward a target document stage. */
+export const DOCUMENT_PROGRESS_ORDER: RequestStatus[] = [
+  "submitted",
+  "under_review",
+  "approved",
+  "assigned",
+  "in_progress",
+  "completed",
+];
+
+export function requestStatusToDocumentProgress(
+  status: RequestStatus,
+): DocumentProgressStatus | null {
+  switch (status) {
+    case "submitted":
+    case "under_review":
+      return "under_review";
+    case "approved":
+      return "approved";
+    case "assigned":
+      return "assigned";
+    case "in_progress":
+      return "in_progress";
+    case "completed":
+      return "completed";
+    default:
+      return null;
+  }
+}
+
+export function documentProgressToRequestStatus(
+  progress: DocumentProgressStatus,
+): RequestStatus {
+  return progress;
+}
+
+/** Next DB status when walking forward toward `target` from `from`. */
+export function nextStatusTowardDocumentProgress(
+  from: RequestStatus,
+  target: DocumentProgressStatus,
+): RequestStatus | null {
+  const order = DOCUMENT_PROGRESS_ORDER;
+  const fromIdx = order.indexOf(from);
+  const targetIdx = order.indexOf(target);
+  if (fromIdx < 0 || targetIdx < 0 || fromIdx >= targetIdx) {
+    return null;
+  }
+  return order[fromIdx + 1] ?? null;
+}
+
 /** Statuses a request can hold and still be considered "open work". */
 export const OPEN_STATUSES: RequestStatus[] = [
   "submitted",

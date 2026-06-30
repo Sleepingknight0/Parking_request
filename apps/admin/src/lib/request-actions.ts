@@ -17,8 +17,10 @@ import {
   type RequestFormInput,
   type FileType,
   type ActivityAction,
+  type DocumentProgressStatus,
+  type RequestStatus,
 } from "@nacc/types";
-import { sanitizeStorageFilename } from "@nacc/utils";
+import { sanitizeStorageFilename, walkToDocumentProgress } from "@nacc/utils";
 
 export interface ActionResult {
   ok: boolean;
@@ -422,6 +424,51 @@ export async function uploadAttachment(
 
   await logActivity("attachment.upload", requestId, profile.id, { fileType });
   revalidatePath(`/requests/${requestId}`);
+  return { ok: true, id: requestId };
+}
+
+/** Advance request to a document-progress stage (admin override via valid transitions). */
+export async function setAdminDocumentProgress(
+  requestId: string,
+  target: DocumentProgressStatus,
+): Promise<ActionResult> {
+  const { profile } = await requireProfile({ roles: [...WRITE_ROLES] });
+  const svc = createServiceClient();
+
+  const { data: current, error: readError } = await svc
+    .from("parking_requests")
+    .select("status")
+    .eq("id", requestId)
+    .single();
+
+  if (readError || !current) {
+    return { ok: false, error: readError?.message ?? "ไม่พบคำขอ" };
+  }
+
+  const from = current.status as RequestStatus;
+  const result = await walkToDocumentProgress(
+    async (next) => {
+      const patch: Record<string, unknown> = { status: next };
+      if (next === "approved") patch.approved_by = profile.id;
+      if (next === "completed") patch.completed_by = profile.id;
+      const { error } = await svc.from("parking_requests").update(patch).eq("id", requestId);
+      return { error: error?.message ?? null };
+    },
+    from,
+    target,
+  );
+
+  if (!result.ok) return { ok: false, error: result.error };
+
+  await logActivity("request.status_change", requestId, profile.id, {
+    target,
+    finalStatus: result.finalStatus,
+    source: "document_progress",
+  });
+  revalidatePath(`/requests/${requestId}`);
+  revalidatePath("/requests");
+  revalidatePath("/dashboard");
+  void syncRequestToSheet(requestId);
   return { ok: true, id: requestId };
 }
 

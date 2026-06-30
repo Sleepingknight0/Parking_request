@@ -25,10 +25,12 @@ import {
 import {
   DATE_PATTERNS,
   DATE_PATTERN_LABELS_TH,
+  FEATURE_FLAGS,
   TH,
   requestFormSchema,
   validateForSubmit,
   type DatePattern,
+  type DocumentProgressStatus,
   type RequestFormInput,
 } from "@nacc/types";
 import { expandDateRange, todayISO } from "@nacc/utils";
@@ -38,6 +40,8 @@ import {
   uploadUserAttachment,
 } from "@/lib/request-actions";
 import { createCommsRequest, uploadCommsAttachment } from "@/lib/comms-actions";
+import { setCommsDocumentProgress, setOfficerDocumentProgress } from "@/lib/document-progress-actions";
+import { DocumentProgressSelect } from "@nacc/ui";
 
 type Scalars = {
   department_id: string;
@@ -107,6 +111,8 @@ export function OfficerRequestForm({
   );
   const [officialFiles, setOfficialFiles] = React.useState<File[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [documentProgress, setDocumentProgress] =
+    React.useState<DocumentProgressStatus>("under_review");
 
   const { register, control, handleSubmit } = useForm<Scalars>({
     defaultValues: {
@@ -163,7 +169,11 @@ export function OfficerRequestForm({
       return;
     }
     if (submit) {
-      if (existingOfficialLetterCount === 0 && officialFiles.length === 0) {
+      if (
+        FEATURE_FLAGS.officialLetterRequired &&
+        existingOfficialLetterCount === 0 &&
+        officialFiles.length === 0
+      ) {
         toast.error("กรุณาแนบรูปหรือไฟล์ PDF ของหนังสือราชการก่อนส่งคำขอ");
         return;
       }
@@ -206,6 +216,15 @@ export function OfficerRequestForm({
             router.refresh();
             return;
           }
+        }
+      }
+
+      if (submit && res.id && documentProgress !== "under_review") {
+        const progressResult = isComms
+          ? await setCommsDocumentProgress(res.id, documentProgress)
+          : await setOfficerDocumentProgress(res.id, documentProgress);
+        if (!progressResult.ok) {
+          toast.error(progressResult.error ?? "บันทึกขั้นตอนเอกสารไม่สำเร็จ");
         }
       }
 
@@ -274,12 +293,16 @@ export function OfficerRequestForm({
           <Field label={TH.entity.subject} className="sm:col-span-2">
             <Input {...register("subject")} />
           </Field>
-          <Field label={TH.entity.contactName}>
-            <Input {...register("contact_name")} />
-          </Field>
-          <Field label={TH.entity.contactPhone}>
-            <Input {...register("contact_phone")} inputMode="tel" />
-          </Field>
+          {FEATURE_FLAGS.contactFields ? (
+            <>
+              <Field label={TH.entity.contactName}>
+                <Input {...register("contact_name")} />
+              </Field>
+              <Field label={TH.entity.contactPhone}>
+                <Input {...register("contact_phone")} inputMode="tel" />
+              </Field>
+            </>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -496,87 +519,107 @@ export function OfficerRequestForm({
         </CardContent>
       </Card>
 
-      <Card className="border-blue-200 bg-blue-50/40">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Paperclip className="h-4 w-4 text-blue-700" />
-            แนบรูปหรือไฟล์หนังสือราชการ
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-slate-700">
-            {isComms
-              ? TH.comms.recordHint
-              : "แนบรูปถ่ายหนังสือหรือไฟล์ PDF/DOC เพื่อให้ฝ่ายสื่อสารตรวจสอบที่มาของคำขอได้"}
-          </p>
-          {existingOfficialLetterCount > 0 ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              มีไฟล์หนังสือราชการแนบอยู่แล้ว {existingOfficialLetterCount} ไฟล์
-            </p>
-          ) : null}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-            multiple
-            onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              setOfficialFiles((prev) => [...prev, ...files]);
-              if (fileInputRef.current) fileInputRef.current.value = "";
-            }}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2 bg-white"
-              disabled={pending}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4" />
-              เลือกไฟล์หนังสือ
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              รองรับ PDF, JPG, PNG, WebP, DOC, DOCX
-            </span>
-          </div>
-
-          {officialFiles.length ? (
-            <ul className="space-y-2">
-              {officialFiles.map((file, index) => (
-                <li
-                  key={`${file.name}-${file.size}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 text-sm"
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{file.name}</span>
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={pending}
-                    onClick={() =>
-                      setOfficialFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index))
-                    }
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-muted-foreground">
+      {FEATURE_FLAGS.officialLetterAttachments ? (
+        <Card className="border-blue-200 bg-blue-50/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Paperclip className="h-4 w-4 text-blue-700" />
+              แนบรูปหรือไฟล์หนังสือราชการ
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-700">
               {isComms
-                ? "ต้องแนบไฟล์หนังสือราชการก่อนบันทึกและส่งให้ รปภ."
-                : "ถ้ากดส่งคำขอ ระบบจะบังคับให้แนบไฟล์หนังสือราชการอย่างน้อย 1 ไฟล์"}
+                ? TH.comms.recordHint
+                : "แนบรูปถ่ายหนังสือหรือไฟล์ PDF/DOC เพื่อให้ฝ่ายสื่อสารตรวจสอบที่มาของคำขอได้"}
             </p>
-          )}
-        </CardContent>
-      </Card>
+            {existingOfficialLetterCount > 0 ? (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                มีไฟล์หนังสือราชการแนบอยู่แล้ว {existingOfficialLetterCount} ไฟล์
+              </p>
+            ) : null}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+              multiple
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                setOfficialFiles((prev) => [...prev, ...files]);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2 bg-white"
+                disabled={pending}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4" />
+                เลือกไฟล์หนังสือ
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                รองรับ PDF, JPG, PNG, WebP, DOC, DOCX
+              </span>
+            </div>
+
+            {officialFiles.length ? (
+              <ul className="space-y-2">
+                {officialFiles.map((file, index) => (
+                  <li
+                    key={`${file.name}-${file.size}-${index}`}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 text-sm"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{file.name}</span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={pending}
+                      onClick={() =>
+                        setOfficialFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index))
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {isComms
+                  ? "ต้องแนบไฟล์หนังสือราชการก่อนบันทึกและส่งให้ รปภ."
+                  : "ถ้ากดส่งคำขอ ระบบจะบังคับให้แนบไฟล์หนังสือราชการอย่างน้อย 1 ไฟล์"}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {mode === "create" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">ขั้นตอนเอกสารก่อนส่ง</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DocumentProgressSelect
+              value={documentProgress}
+              onValueChange={setDocumentProgress}
+              disabled={pending}
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              เลือกว่าเอกสารนี้อยู่ในขั้นตอนใดก่อนส่งเข้าระบบ (ค่าเริ่มต้น: รออนุมัติ)
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         {!isComms ? (

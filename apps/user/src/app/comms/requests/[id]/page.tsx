@@ -17,6 +17,7 @@ import {
 } from "@nacc/ui";
 import {
   TH,
+  FEATURE_FLAGS,
   STATUS_LABELS_TH,
   FILE_TYPE_LABELS_TH,
   type FileType,
@@ -28,6 +29,7 @@ import { formatThaiDate, formatThaiDateTime, formatTimeRange, formatPhone } from
 import { getSignedUrls } from "@/lib/storage";
 import { CommsAttachmentUploader } from "@/components/comms-attachment-uploader";
 import { CommsRequestActions } from "@/components/comms-request-actions";
+import { CommsDocumentProgressPanel } from "@/components/comms-document-progress-panel";
 import { CommsVerificationBadge } from "@/components/comms-verification-badge";
 
 export const dynamic = "force-dynamic";
@@ -88,8 +90,12 @@ export default async function CommsRequestDetailPage({
               <Info label={TH.entity.requestingDepartment} value={request.department?.name_th} />
               <Info label={TH.entity.letterDate} value={formatThaiDate(request.official_letter_date)} />
               <Info label={TH.entity.receivedDate} value={formatThaiDate(request.received_date)} />
-              <Info label={TH.entity.contactName} value={request.contact_name} />
-              <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+              {FEATURE_FLAGS.contactFields ? (
+                <>
+                  <Info label={TH.entity.contactName} value={request.contact_name} />
+                  <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                </>
+              ) : null}
               <Info label={TH.entity.subject} value={request.subject} className="sm:col-span-2" />
             </CardContent>
           </Card>
@@ -127,19 +133,23 @@ export default async function CommsRequestDetailPage({
               <CardTitle className="text-base">{TH.entity.attachment}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.official_letter}</p>
-                  <CommsAttachmentUploader requestId={id} fileType="official_letter" label="แนบหนังสือ" />
-                </div>
-                <AttachmentPreviewSection
-                  label=""
-                  items={grouped("official_letter")}
-                  signedSupabaseUrls={signed}
-                  emptyMessage="ยังไม่แนบหนังสือราชการ"
-                />
-              </div>
-              <Separator />
+              {FEATURE_FLAGS.officialLetterAttachments ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.official_letter}</p>
+                      <CommsAttachmentUploader requestId={id} fileType="official_letter" label="แนบหนังสือ" />
+                    </div>
+                    <AttachmentPreviewSection
+                      label=""
+                      items={grouped("official_letter")}
+                      signedSupabaseUrls={signed}
+                      emptyMessage="ยังไม่แนบหนังสือราชการ"
+                    />
+                  </div>
+                  <Separator />
+                </>
+              ) : null}
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.general_attachment}</p>
@@ -186,6 +196,19 @@ export default async function CommsRequestDetailPage({
                 />
               ) : null}
               {request.admin_note ? <Info label={TH.entity.adminNote} value={request.admin_note} /> : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">ขั้นตอนเอกสาร</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CommsDocumentProgressPanel
+                requestId={id}
+                currentStatus={request.status}
+                editable
+              />
             </CardContent>
           </Card>
 

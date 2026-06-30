@@ -26,15 +26,18 @@ import {
   TH,
   DATE_PATTERNS,
   DATE_PATTERN_LABELS_TH,
+  FEATURE_FLAGS,
   PRIORITIES,
   PRIORITY_LABELS_TH,
   requestFormSchema,
   validateForSubmit,
   type DatePattern,
+  type DocumentProgressStatus,
   type RequestFormInput,
 } from "@nacc/types";
 import { expandDateRange, todayISO } from "@nacc/utils";
-import { createRequest, updateRequest } from "@/lib/request-actions";
+import { createRequest, setAdminDocumentProgress, updateRequest } from "@/lib/request-actions";
+import { DocumentProgressSelect } from "@nacc/ui";
 
 type Scalars = {
   department_id: string;
@@ -84,6 +87,8 @@ export function RequestForm({
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
+  const [documentProgress, setDocumentProgress] =
+    React.useState<DocumentProgressStatus>("under_review");
   const [pattern, setPattern] = React.useState<DatePattern>(initial?.date_pattern ?? "single");
 
   const initDate = initial?.dates?.[0];
@@ -180,6 +185,12 @@ export function RequestForm({
         toast.error(res.error ?? "บันทึกไม่สำเร็จ");
         return;
       }
+      if (submit && res.id && documentProgress !== "under_review") {
+        const progressResult = await setAdminDocumentProgress(res.id, documentProgress);
+        if (!progressResult.ok) {
+          toast.error(progressResult.error ?? "บันทึกขั้นตอนเอกสารไม่สำเร็จ");
+        }
+      }
       toast.success(TH.state.saved);
       router.push(`/requests/${res.id}`);
       router.refresh();
@@ -236,12 +247,16 @@ export function RequestForm({
           <Field label={TH.entity.subject} className="sm:col-span-2">
             <Input {...register("subject")} placeholder="เรื่องที่ขอใช้ที่จอดรถ" />
           </Field>
-          <Field label={TH.entity.contactName}>
-            <Input {...register("contact_name")} />
-          </Field>
-          <Field label={TH.entity.contactPhone}>
-            <Input {...register("contact_phone")} inputMode="tel" />
-          </Field>
+          {FEATURE_FLAGS.contactFields ? (
+            <>
+              <Field label={TH.entity.contactName}>
+                <Input {...register("contact_name")} />
+              </Field>
+              <Field label={TH.entity.contactPhone}>
+                <Input {...register("contact_phone")} inputMode="tel" />
+              </Field>
+            </>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -403,6 +418,24 @@ export function RequestForm({
           <Field label={TH.entity.adminNote}><Textarea {...register("admin_note")} rows={2} /></Field>
         </CardContent>
       </Card>
+
+      {mode === "create" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">ขั้นตอนเอกสารก่อนส่ง</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DocumentProgressSelect
+              value={documentProgress}
+              onValueChange={setDocumentProgress}
+              disabled={pending}
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              เลือกว่าเอกสารนี้อยู่ในขั้นตอนใดก่อนส่งเข้าระบบ (ค่าเริ่มต้น: รออนุมัติ)
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         {mode === "create" ? (

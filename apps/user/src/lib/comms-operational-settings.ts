@@ -1,4 +1,5 @@
 import { createServiceClient } from "@nacc/db/service";
+import { FEATURE_FLAGS } from "@nacc/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSharedActorProfile } from "./user-guards";
 import type { UserAppMode } from "./user-mode";
@@ -79,7 +80,7 @@ async function autoApproveRequest(svc: Svc, requestId: string, actorId: string):
     .maybeSingle();
 
   if (!current || !["submitted", "under_review"].includes(current.status)) return false;
-  if (!(await hasOfficialLetter(svc, requestId))) return false;
+  if (FEATURE_FLAGS.officialLetterRequired && !(await hasOfficialLetter(svc, requestId))) return false;
 
   const { error } = await svc
     .from("parking_requests")

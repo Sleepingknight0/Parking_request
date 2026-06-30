@@ -15,6 +15,7 @@ import {
 } from "@nacc/ui";
 import {
   FILE_TYPE_LABELS_TH,
+  FEATURE_FLAGS,
   TH,
   type Attachment,
   type FileType,
@@ -23,6 +24,7 @@ import { getUserAppDb } from "@/lib/user-db";
 import { getRequestById } from "@nacc/db/queries";
 import { formatPhone, formatThaiDate, formatTimeRange } from "@nacc/utils";
 import { OfficerRequestActions } from "@/components/officer-request-actions";
+import { OfficerDocumentProgressPanel } from "@/components/officer-document-progress-panel";
 import { UserAttachmentUploader } from "@/components/user-attachment-uploader";
 import { getSignedUrls } from "@/lib/storage";
 
@@ -82,8 +84,12 @@ export default async function OfficerRequestDetailPage({
               <Info label={TH.entity.requestingDepartment} value={request.department?.name_th} />
               <Info label={TH.entity.letterDate} value={formatThaiDate(request.official_letter_date)} />
               <Info label={TH.entity.receivedDate} value={formatThaiDate(request.received_date)} />
-              <Info label={TH.entity.contactName} value={request.contact_name} />
-              <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+              {FEATURE_FLAGS.contactFields ? (
+                <>
+                  <Info label={TH.entity.contactName} value={request.contact_name} />
+                  <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                </>
+              ) : null}
               <Info label={TH.entity.subject} value={request.subject} className="sm:col-span-2" />
               <Info label={TH.entity.purpose} value={request.purpose} className="sm:col-span-2" />
             </CardContent>
@@ -140,20 +146,24 @@ export default async function OfficerRequestDetailPage({
               <CardTitle className="text-base">{TH.entity.attachment}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <AttachmentPreviewSection
-                label={FILE_TYPE_LABELS_TH.official_letter}
-                items={grouped("official_letter")}
-                signedSupabaseUrls={signed}
-                emptyMessage="ยังไม่แนบหนังสือราชการ — แตะการ์ดเพื่อดูตัวอย่างเมื่อมีไฟล์"
-                upload={
-                  <UserAttachmentUploader
-                    requestId={id}
-                    fileType="official_letter"
-                    label="แนบหนังสือราชการ"
+              {FEATURE_FLAGS.officialLetterAttachments ? (
+                <>
+                  <AttachmentPreviewSection
+                    label={FILE_TYPE_LABELS_TH.official_letter}
+                    items={grouped("official_letter")}
+                    signedSupabaseUrls={signed}
+                    emptyMessage="ยังไม่แนบหนังสือราชการ — แตะการ์ดเพื่อดูตัวอย่างเมื่อมีไฟล์"
+                    upload={
+                      <UserAttachmentUploader
+                        requestId={id}
+                        fileType="official_letter"
+                        label="แนบหนังสือราชการ"
+                      />
+                    }
                   />
-                }
-              />
-              <Separator />
+                  <Separator />
+                </>
+              ) : null}
               <AttachmentPreviewSection
                 label={FILE_TYPE_LABELS_TH.general_attachment}
                 items={grouped("general_attachment")}
@@ -176,6 +186,19 @@ export default async function OfficerRequestDetailPage({
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">ขั้นตอนเอกสาร</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OfficerDocumentProgressPanel
+                requestId={id}
+                currentStatus={request.status}
+                editable
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">การดำเนินการ</CardTitle>

@@ -16,6 +16,7 @@ import {
 } from "@nacc/ui";
 import {
   TH,
+  FEATURE_FLAGS,
   STATUS_LABELS_TH,
   FILE_TYPE_LABELS_TH,
   type FileType,
@@ -34,6 +35,7 @@ import { getSignedUrls } from "@/lib/storage";
 import { RequestActions } from "@/components/request-actions";
 import { AttachmentUploader } from "@/components/attachment-uploader";
 import { AdminSecuritySignPanel } from "@/components/admin-security-sign-panel";
+import { AdminDocumentProgressPanel } from "@/components/admin-document-progress-panel";
 import { buildAdminSecuritySignPayloads } from "@/lib/security-signs";
 
 export const dynamic = "force-dynamic";
@@ -125,8 +127,12 @@ export default async function RequestDetailPage({
               <Info label={TH.entity.requestingDepartment} value={request.department?.name_th} />
               <Info label={TH.entity.letterDate} value={formatThaiDate(request.official_letter_date)} />
               <Info label={TH.entity.receivedDate} value={formatThaiDate(request.received_date)} />
-              <Info label={TH.entity.contactName} value={request.contact_name} />
-              <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+              {FEATURE_FLAGS.contactFields ? (
+                <>
+                  <Info label={TH.entity.contactName} value={request.contact_name} />
+                  <Info label={TH.entity.contactPhone} value={formatPhone(request.contact_phone)} />
+                </>
+              ) : null}
               <Info label={TH.entity.subject} value={request.subject} className="sm:col-span-2" />
               <Info label={TH.entity.purpose} value={request.purpose} className="sm:col-span-2" />
             </CardContent>
@@ -208,6 +214,17 @@ export default async function RequestDetailPage({
           )}
 
           <Card>
+            <CardHeader><CardTitle className="text-base">ขั้นตอนเอกสาร</CardTitle></CardHeader>
+            <CardContent>
+              <AdminDocumentProgressPanel
+                requestId={id}
+                currentStatus={request.status}
+                editable={canWrite}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
             <CardHeader><CardTitle className="text-base">ประวัติสถานะ</CardTitle></CardHeader>
             <CardContent>
               <ol className="space-y-4">
@@ -284,15 +301,19 @@ function AttachmentsCard({
     <Card>
       <CardHeader><CardTitle className="text-base">{TH.entity.attachment}</CardTitle></CardHeader>
       <CardContent className="space-y-5">
-        <AttachGroup
-          type="official_letter"
-          items={officialLetters}
-          signed={signed}
-          requestId={requestId}
-          canUpload={canUpload}
-          uploaderById={uploaderById}
-        />
-        <Separator />
+        {FEATURE_FLAGS.officialLetterAttachments ? (
+          <>
+            <AttachGroup
+              type="official_letter"
+              items={officialLetters}
+              signed={signed}
+              requestId={requestId}
+              canUpload={canUpload}
+              uploaderById={uploaderById}
+            />
+            <Separator />
+          </>
+        ) : null}
         <div>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium">{FILE_TYPE_LABELS_TH.completion_photo}</p>

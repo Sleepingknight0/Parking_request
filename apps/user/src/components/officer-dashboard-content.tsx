@@ -7,7 +7,7 @@ import {
   Button,
   StatCard,
 } from "@nacc/ui";
-import { type ParkingRequestListItem } from "@nacc/types";
+import { type ParkingRequestListItem, FEATURE_FLAGS } from "@nacc/types";
 import { todayISO } from "@nacc/utils";
 import { DashboardRequestPanel } from "./dashboard-request-panel";
 import { OfficerRequestDetailSheet } from "./officer-request-detail-sheet";
@@ -58,13 +58,15 @@ export function OfficerDashboardContent({ rows }: { rows: OfficerDashboardRow[] 
           value={todayRows.length}
           icon={<CalendarDays className="h-5 w-5" />}
         />
-        <StatCard
-          compact
-          label="ยังไม่แนบไฟล์"
-          value={missingLetters}
-          icon={<FileWarning className="h-5 w-5" />}
-          accentClassName={missingLetters ? "text-amber-600" : "text-emerald-600"}
-        />
+        {FEATURE_FLAGS.officialLetterIndicators ? (
+          <StatCard
+            compact
+            label="ยังไม่แนบไฟล์"
+            value={missingLetters}
+            icon={<FileWarning className="h-5 w-5" />}
+            accentClassName={missingLetters ? "text-amber-600" : "text-emerald-600"}
+          />
+        ) : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr] lg:gap-6">

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@nacc/db/service";
 import {
   FILE_TYPE_FOLDER,
+  FEATURE_FLAGS,
   TH,
   isAllowedMimeType,
   MAX_FILE_SIZE,
@@ -102,7 +103,7 @@ export async function commsApproveRequest(id: string): Promise<ActionResult> {
     return { ok: false, error: "อนุมัติได้เฉพาะคำขอที่รอพิจารณา" };
   }
 
-  const hasLetter = await hasOfficialLetter(id);
+  const hasLetter = FEATURE_FLAGS.officialLetterRequired ? await hasOfficialLetter(id) : true;
   if (!hasLetter) return { ok: false, error: TH.comms.needOfficialLetter };
 
   const { error } = await svc
