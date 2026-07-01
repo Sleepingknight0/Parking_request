@@ -18,6 +18,7 @@ import {
   X,
   LogOut,
   ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import {
   cn,
@@ -45,6 +46,7 @@ const ALL_NAV: NavItem[] = [
   { href: "/calendar", label: TH.nav.calendar, icon: CalendarDays },
   { href: "/departments", label: TH.nav.departments, icon: Building2, roles: ["super_admin", "admin"] },
   { href: "/locations", label: TH.nav.locations, icon: MapPin, roles: ["super_admin", "admin"] },
+  { href: "/security-officers", label: TH.nav.securityOfficers, icon: ShieldCheck, roles: ["super_admin", "admin"] },
   { href: "/users", label: TH.nav.users, icon: Users, roles: ["super_admin", "admin"] },
   { href: "/reports", label: TH.nav.reports, icon: BarChart3 },
   { href: "/activity", label: TH.nav.activityLogs, icon: History, roles: ["super_admin", "admin"] },

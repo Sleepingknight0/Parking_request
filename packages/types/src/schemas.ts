@@ -60,6 +60,11 @@ export const requestFormSchema = z.object({
   subject: z.string().trim().optional(),
   contact_name: z.string().trim().optional(),
   contact_phone: z.string().trim().optional(),
+  receiving_officer_id: z
+    .string()
+    .uuid("กรุณาเลือกเจ้าหน้าที่ที่รับเรื่อง")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   requested_location_id: z.string().uuid().optional().or(z.literal("").transform(() => undefined)),
   requested_location_text: z.string().trim().optional(),
   date_pattern: datePatternEnum.default("single"),
@@ -154,3 +159,10 @@ export const locationSchema = z.object({
   is_active: z.boolean().default(true),
 });
 export type LocationInput = z.infer<typeof locationSchema>;
+
+export const securityOfficerSchema = z.object({
+  name_th: z.string().trim().min(1, "กรุณากรอกชื่อเจ้าหน้าที่"),
+  is_active: z.boolean().default(true),
+  sort_order: z.coerce.number().int().min(0).default(0),
+});
+export type SecurityOfficerInput = z.infer<typeof securityOfficerSchema>;

@@ -75,6 +75,23 @@ type LocationsInsert = {
   updated_at?: string;
 };
 
+type SecurityOfficersRow = {
+  id: string;
+  name_th: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+type SecurityOfficersInsert = {
+  id?: string;
+  name_th: string;
+  is_active?: boolean;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type ParkingZonesRow = {
   id: string;
   name_th: string;
@@ -107,6 +124,7 @@ type ParkingRequestsRow = {
   subject: string | null;
   contact_name: string | null;
   contact_phone: string | null;
+  receiving_officer_id: string | null;
   requested_location_id: string | null;
   requested_location_text: string | null;
   date_pattern: string;
@@ -149,6 +167,7 @@ type ParkingRequestsInsert = {
   subject?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
+  receiving_officer_id?: string | null;
   requested_location_id?: string | null;
   requested_location_text?: string | null;
   date_pattern?: string;
@@ -316,6 +335,7 @@ export interface Database {
       profiles: { Row: ProfilesRow; Insert: ProfilesInsert; Update: Partial<ProfilesInsert>; Relationships: [] };
       departments: { Row: DepartmentsRow; Insert: DepartmentsInsert; Update: Partial<DepartmentsInsert>; Relationships: [] };
       locations: { Row: LocationsRow; Insert: LocationsInsert; Update: Partial<LocationsInsert>; Relationships: [] };
+      security_officers: { Row: SecurityOfficersRow; Insert: SecurityOfficersInsert; Update: Partial<SecurityOfficersInsert>; Relationships: [] };
       parking_zones: { Row: ParkingZonesRow; Insert: ParkingZonesInsert; Update: Partial<ParkingZonesInsert>; Relationships: [] };
       parking_requests: { Row: ParkingRequestsRow; Insert: ParkingRequestsInsert; Update: Partial<ParkingRequestsInsert>; Relationships: [] };
       request_dates: { Row: RequestDatesRow; Insert: RequestDatesInsert; Update: Partial<RequestDatesInsert>; Relationships: [] };

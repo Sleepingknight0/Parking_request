@@ -58,6 +58,19 @@ Reference table for Thai bureaus/departments.
 
 Reference table for parking locations.
 
+### security_officers
+
+Reference list of comms staff who receive official letters (dropdown on comms record form).
+
+Important fields:
+
+- `id`
+- `name_th`
+- `is_active`
+- `sort_order`
+
+Managed from admin menu **เจ้าหน้าที่รับเรื่อง** (`/security-officers`).
+
 ### parking_zones
 
 Optional child reference table for location-specific parking zones.
@@ -77,6 +90,7 @@ Important fields:
 - `subject`
 - `contact_name`
 - `contact_phone`
+- `receiving_officer_id` — FK to `security_officers` (comms receiving officer)
 - `requested_location_id`
 - `requested_location_text`
 - `date_pattern`

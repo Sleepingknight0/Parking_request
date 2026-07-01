@@ -69,6 +69,19 @@ async function hasOfficialLetter(requestId: string): Promise<boolean> {
   return (count ?? 0) > 0;
 }
 
+async function resolveReceivingOfficerName(
+  svc: ReturnType<typeof createServiceClient>,
+  officerId?: string,
+): Promise<string | null> {
+  if (!officerId) return null;
+  const { data } = await svc
+    .from("security_officers")
+    .select("name_th")
+    .eq("id", officerId)
+    .maybeSingle();
+  return data?.name_th ?? null;
+}
+
 export async function commsMarkUnderReview(id: string): Promise<ActionResult> {
   const { profile } = await requireAppMode("comms");
   const svc = createServiceClient();
@@ -192,6 +205,7 @@ export async function createCommsRequest(
 
   const now = new Date().toISOString();
   const svc = createServiceClient();
+  const receivingOfficerName = await resolveReceivingOfficerName(svc, v.receiving_officer_id);
   const { data: req, error } = await svc
     .from("parking_requests")
     .insert({
@@ -203,6 +217,8 @@ export async function createCommsRequest(
       subject: v.subject ?? null,
       contact_name: v.contact_name ?? null,
       contact_phone: v.contact_phone ?? null,
+      receiving_officer_id: v.receiving_officer_id ?? null,
+      legacy_officer_name: receivingOfficerName,
       requested_location_id: v.requested_location_id ?? null,
       requested_location_text: v.requested_location_text ?? null,
       date_pattern: v.date_pattern,

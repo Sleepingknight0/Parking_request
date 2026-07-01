@@ -30,6 +30,7 @@ export async function syncRequestToSheet(requestId: string): Promise<void> {
       .from("parking_requests")
       .select(
         `*, department:departments(name_th), requested_location:locations(name_th),
+         receiving_officer:security_officers(name_th),
          created_by_profile:profiles!created_by(display_name),
          request_dates(request_date,start_time,end_time)`,
       )
@@ -54,7 +55,10 @@ export async function syncRequestToSheet(requestId: string): Promise<void> {
       time_range: timeRange || null,
       cars_count: r.cars_count,
       location_name: (r as any).requested_location?.name_th ?? (r as any).requested_location_text ?? null,
-      legacy_officer_name: (r as any).legacy_officer_name ?? null,
+      legacy_officer_name:
+        (r as { receiving_officer?: { name_th?: string } | null }).receiving_officer?.name_th ??
+        (r as { legacy_officer_name?: string | null }).legacy_officer_name ??
+        null,
       officer_display_name: (r as any).created_by_profile?.display_name ?? null,
       status_label_th: STATUS_LABELS_TH[r.status as keyof typeof STATUS_LABELS_TH] ?? r.status,
     };

@@ -35,6 +35,7 @@ function job(partial: Partial<SecurityJobRow> & Pick<SecurityJobRow, "id">): Sec
     subject: partial.subject ?? null,
     contact_name: null,
     contact_phone: null,
+    receiving_officer_id: null,
     purpose: null,
     completion_note: null,
     cancellation_reason: null,

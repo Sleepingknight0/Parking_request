@@ -97,6 +97,11 @@ export default async function CommsRequestDetailPage({
                 </>
               ) : null}
               <Info label={TH.entity.subject} value={request.subject} className="sm:col-span-2" />
+              <Info
+                label={TH.entity.receivingOfficer}
+                value={request.receiving_officer?.name_th ?? request.legacy_officer_name}
+                className="sm:col-span-2"
+              />
             </CardContent>
           </Card>
 

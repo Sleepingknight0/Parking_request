@@ -22,7 +22,7 @@ import {
   toast,
 } from "@nacc/ui";
 import { TH } from "@nacc/types";
-import { saveDepartment, saveLocation } from "@/lib/reference-actions";
+import { saveDepartment, saveLocation, saveSecurityOfficer } from "@/lib/reference-actions";
 
 export interface ReferenceItem {
   id: string;
@@ -36,9 +36,9 @@ export function ReferenceManager({
   items,
   secondaryLabel,
 }: {
-  kind: "department" | "location";
+  kind: "department" | "location" | "security_officer";
   items: ReferenceItem[];
-  secondaryLabel: string;
+  secondaryLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -66,10 +66,28 @@ export function ReferenceManager({
   async function save() {
     setPending(true);
     try {
-      const res =
-        kind === "department"
-          ? await saveDepartment({ id: editing?.id, name_th: name, short_name: secondary || undefined, is_active: active })
-          : await saveLocation({ id: editing?.id, name_th: name, description: secondary || undefined, is_active: active });
+      let res: { ok: boolean; error?: string };
+      if (kind === "department") {
+        res = await saveDepartment({
+          id: editing?.id,
+          name_th: name,
+          short_name: secondary || undefined,
+          is_active: active,
+        });
+      } else if (kind === "location") {
+        res = await saveLocation({
+          id: editing?.id,
+          name_th: name,
+          description: secondary || undefined,
+          is_active: active,
+        });
+      } else {
+        res = await saveSecurityOfficer({
+          id: editing?.id,
+          name_th: name,
+          is_active: active,
+        });
+      }
       if (!res.ok) {
         toast.error(res.error ?? "บันทึกไม่สำเร็จ");
         return;
@@ -95,7 +113,9 @@ export function ReferenceManager({
           <TableHeader>
             <TableRow>
               <TableHead className="text-right">ชื่อ</TableHead>
-              <TableHead className="text-right">{secondaryLabel}</TableHead>
+              {secondaryLabel ? (
+                <TableHead className="text-right">{secondaryLabel}</TableHead>
+              ) : null}
               <TableHead className="text-right">สถานะ</TableHead>
               <TableHead className="text-right"></TableHead>
             </TableRow>
@@ -104,7 +124,9 @@ export function ReferenceManager({
             {items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name_th}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.secondary ?? "-"}</TableCell>
+                {secondaryLabel ? (
+                  <TableCell className="text-sm text-muted-foreground">{item.secondary ?? "-"}</TableCell>
+                ) : null}
                 <TableCell>
                   {item.is_active ? <Badge>ใช้งาน</Badge> : <Badge variant="secondary">ปิด</Badge>}
                 </TableCell>
@@ -131,10 +153,12 @@ export function ReferenceManager({
               <Label>ชื่อ *</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label>{secondaryLabel}</Label>
-              <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
-            </div>
+            {secondaryLabel ? (
+              <div className="space-y-1.5">
+                <Label>{secondaryLabel}</Label>
+                <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
+              </div>
+            ) : null}
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
               เปิดใช้งาน

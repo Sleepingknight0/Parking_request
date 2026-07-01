@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@nacc/db/server";
 import { requireProfile } from "@nacc/auth/guards";
-import { departmentSchema, locationSchema } from "@nacc/types";
+import { departmentSchema, locationSchema, securityOfficerSchema } from "@nacc/types";
 
 export interface ActionResult {
   ok: boolean;
@@ -49,5 +49,25 @@ export async function saveLocation(
     : await supabase.from("locations").insert(payload);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/locations");
+  return { ok: true };
+}
+
+export async function saveSecurityOfficer(
+  input: { id?: string; name_th: string; is_active?: boolean; sort_order?: number },
+): Promise<ActionResult> {
+  await requireProfile({ roles: [...ADMIN] });
+  const parsed = securityOfficerSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+  const supabase = await createServerSupabase();
+  const payload = {
+    name_th: parsed.data.name_th,
+    is_active: parsed.data.is_active,
+    sort_order: parsed.data.sort_order,
+  };
+  const { error } = input.id
+    ? await supabase.from("security_officers").update(payload).eq("id", input.id)
+    : await supabase.from("security_officers").insert(payload);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/security-officers");
   return { ok: true };
 }

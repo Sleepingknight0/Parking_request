@@ -15,6 +15,7 @@ import type {
 export type Profile = Omit<Tables<"profiles">, "role"> & { role: Role };
 export type Department = Tables<"departments">;
 export type Location = Tables<"locations">;
+export type SecurityOfficer = Tables<"security_officers">;
 export type ParkingZone = Tables<"parking_zones">;
 export type RequestDate = Tables<"request_dates">;
 export type LicensePlate = Tables<"request_license_plates">;
@@ -42,6 +43,7 @@ export type ProfileRef = Pick<Profile, "id" | "display_name" | "username" | "rol
 export type ParkingRequestWithRelations = ParkingRequest & {
   department: Department | null;
   requested_location: Location | null;
+  receiving_officer: Pick<SecurityOfficer, "id" | "name_th"> | null;
   created_by_profile: ProfileRef | null;
   assigned_to_profile: ProfileRef | null;
   request_dates: RequestDate[];

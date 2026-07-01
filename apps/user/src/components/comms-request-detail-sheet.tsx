@@ -144,6 +144,10 @@ export function CommsRequestDetailSheet({
               </div>
 
               {request.subject ? <Info label={TH.entity.subject} value={request.subject} /> : null}
+              <Info
+                label={TH.entity.receivingOfficer}
+                value={request.receiving_officer?.name_th ?? request.legacy_officer_name}
+              />
 
               <div>
                 <p className="mb-1.5 text-xs text-muted-foreground">{TH.entity.requestedDate}</p>

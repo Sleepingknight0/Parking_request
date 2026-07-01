@@ -28,6 +28,7 @@ export const REQUEST_DETAIL_SELECT = `
   *,
   department:departments(*),
   requested_location:locations(*),
+  receiving_officer:security_officers(id,name_th),
   created_by_profile:profiles!created_by(id,display_name,username,role),
   assigned_to_profile:profiles!assigned_to(id,display_name,username,role),
   request_dates(*),

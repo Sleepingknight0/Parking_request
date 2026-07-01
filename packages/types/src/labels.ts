@@ -29,6 +29,7 @@ export const TH = {
     subject: "เรื่อง",
     contactName: "ผู้ประสานงาน",
     contactPhone: "เบอร์โทร",
+    receivingOfficer: "เจ้าหน้าที่ที่รับเรื่อง",
     purpose: "เหตุผล/รายละเอียด",
     note: "หมายเหตุเพิ่มเติม",
     adminNote: "หมายเหตุภายใน",
@@ -100,6 +101,8 @@ export const TH = {
     recordAndSend: "บันทึกและส่งให้ รปภ.",
     recordHint: "บันทึกโดยสื่อสารจะข้ามขั้นตอนอนุมัติและส่งงานไป รปภ. ทันที",
     recordSuccess: "บันทึกแล้ว ส่งงานไป รปภ. ทันที",
+    receivingOfficerHint:
+      "หากไม่มีรายชื่อในนี้ ให้ผู้ดูแลระบบเพิ่มชื่อในเมนู Admin > จัดการรายชื่อเจ้าหน้าที่รับเรื่อง",
     specialModesTitle: "โหมดพิเศษ",
     specialModesHint:
       "ตั้งค่าระดับระบบ — เปิดแล้วจะทำงานตลอดจนกว่าจะมีคนมาปิด (ปิดหน้าหรือเปิดใหม่ก็ยังเปิดอยู่)",
@@ -138,6 +141,7 @@ export const TH = {
     assignments: "การมอบหมายงาน",
     departments: "สำนัก/หน่วยงาน",
     locations: "สถานที่จอดรถ",
+    securityOfficers: "เจ้าหน้าที่รับเรื่อง",
     users: "ผู้ใช้งาน",
     reports: "รายงาน",
     settings: "ตั้งค่า",
