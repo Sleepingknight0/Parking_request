@@ -65,6 +65,7 @@ function rgb(r: number, g: number, b: number) {
 async function formatSheet(sheetId: number) {
   const sheets = sheetsClient();
   const WHITE  = { red: 1, green: 1, blue: 1 };
+  const BLACK  = { red: 0, green: 0, blue: 0 };
   const NAVY   = rgb(30,  58,  95);
   const SYSTEM = rgb(55,  65,  81);
   const TEAL   = rgb(17,  94,  89);
@@ -127,9 +128,10 @@ async function formatSheet(sheetId: number) {
     { repeatCell: {
         range: { sheetId, startRowIndex:1, endRowIndex:2000, startColumnIndex:0, endColumnIndex:LIVE_SHEET_HEADERS.length },
         cell: { userEnteredFormat: {
-          textFormat: { fontSize: 10 }, verticalAlignment: "MIDDLE", wrapStrategy: "WRAP",
+          backgroundColor: WHITE,
+          textFormat: { foregroundColor: BLACK, bold: false, fontSize: 10 }, verticalAlignment: "MIDDLE", wrapStrategy: "WRAP",
           borders: { bottom: LIGHT, right: LIGHT } } },
-        fields: "userEnteredFormat(textFormat,verticalAlignment,wrapStrategy,borders)" } },
+        fields: "userEnteredFormat(backgroundColor,textFormat,verticalAlignment,wrapStrategy,borders)" } },
     // Center: A, D, E, F, I, J, K
     ...([0, 3, 4, 5, 8, 9, 10].map(c => ({ repeatCell: {
         range: { sheetId, startRowIndex:1, endRowIndex:2000, startColumnIndex:c, endColumnIndex:c+1 },

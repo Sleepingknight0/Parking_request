@@ -71,6 +71,49 @@ async function ensureSheetColumnCount(
 
 const tabNameCache = new Map<string, string>();
 
+async function applyDataRowBaseFormat(
+  spreadsheetId: string,
+  sheetName: string,
+  rowNumber: number,
+  sheets = sheetsClient(),
+): Promise<void> {
+  if (rowNumber <= SHEET_HEADER_ROW) return;
+
+  const sheetId = await ensureSheetColumnCount(spreadsheetId, sheetName, sheets);
+  const white = { red: 1, green: 1, blue: 1 };
+  const black = { red: 0, green: 0, blue: 0 };
+  const border = { style: "SOLID" as const, color: rgb(229, 231, 235) };
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          repeatCell: {
+            range: {
+              sheetId,
+              startRowIndex: rowNumber - 1,
+              endRowIndex: rowNumber,
+              startColumnIndex: 0,
+              endColumnIndex: SHEET_COLS,
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: white,
+                textFormat: { foregroundColor: black, bold: false, fontSize: 10 },
+                verticalAlignment: "MIDDLE",
+                wrapStrategy: "WRAP",
+                borders: { bottom: border, right: border },
+              },
+            },
+            fields: "userEnteredFormat(backgroundColor,textFormat,verticalAlignment,wrapStrategy,borders)",
+          },
+        },
+      ],
+    },
+  });
+}
+
 /**
  * Resolves the live tab title from the spreadsheet.
  * Uses GOOGLE_SHEETS_GID first (avoids UTF-8 env corruption on Vercel).
@@ -165,7 +208,9 @@ export async function appendSheetRow(
   const updatedRange = res.data.updates?.updatedRange;
   if (!updatedRange) return null;
   const m = updatedRange.match(/:?[A-Z]+(\d+)$/);
-  return m && m[1] ? parseInt(m[1], 10) : null;
+  const rowNumber = m && m[1] ? parseInt(m[1], 10) : null;
+  if (rowNumber) await applyDataRowBaseFormat(spreadsheetId, sheetName, rowNumber, sheets);
+  return rowNumber;
 }
 
 /** Overwrites a specific row (1-based) in columns A..AN. */
@@ -183,6 +228,7 @@ export async function updateSheetRow(
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [values] },
   });
+  await applyDataRowBaseFormat(spreadsheetId, sheetName, rowNumber, sheets);
 }
 
 /** Writes the canonical header row to row 1 if it is empty or different. */
@@ -271,6 +317,7 @@ export async function initSheetFormat(
   const NAVY   = rgb(30,  58,  95);   // header bg  #1e3a5f
   const SYSTEM = rgb(55,  65,  81);   // J/K header #374151
   const WHITE  = { red: 1, green: 1, blue: 1 };
+  const BLACK  = { red: 0, green: 0, blue: 0 };
   const BORDER_LIGHT = { style: "SOLID" as const, color: rgb(229, 231, 235) };
   const BORDER_MED   = { style: "SOLID_MEDIUM" as const, color: rgb(156, 163, 175) };
 
@@ -372,13 +419,14 @@ export async function initSheetFormat(
         },
         cell: {
           userEnteredFormat: {
-            textFormat: { fontSize: 10 },
+            backgroundColor: WHITE,
+            textFormat: { foregroundColor: BLACK, bold: false, fontSize: 10 },
             verticalAlignment: "MIDDLE",
             wrapStrategy: "WRAP",
             borders: { bottom: BORDER_LIGHT, right: BORDER_LIGHT },
           },
         },
-        fields: "userEnteredFormat(textFormat,verticalAlignment,wrapStrategy,borders)",
+        fields: "userEnteredFormat(backgroundColor,textFormat,verticalAlignment,wrapStrategy,borders)",
       },
     },
 
