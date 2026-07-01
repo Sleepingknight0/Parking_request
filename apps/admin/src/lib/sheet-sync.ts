@@ -6,7 +6,6 @@
  */
 import "server-only";
 import { createServiceClient } from "@nacc/db/service";
-import { STATUS_LABELS_TH } from "@nacc/types";
 import {
   appendSheetRow,
   updateSheetRow,
@@ -16,7 +15,8 @@ import {
   isSheetsConfigured,
   googleSheetsId,
 } from "@nacc/storage";
-import { buildLiveSheetRow, formatTimeThDot, LIVE_SHEET_HEADERS, type LiveSheetRequest } from "@nacc/utils";
+import { buildLiveSheetRow, LIVE_SHEET_HEADERS } from "@nacc/utils";
+import { fetchLiveSheetRequest } from "./sheet-row";
 
 export async function syncRequestToSheet(requestId: string): Promise<void> {
   if (!isSheetsConfigured()) return;
@@ -26,47 +26,18 @@ export async function syncRequestToSheet(requestId: string): Promise<void> {
     const spreadsheetId = googleSheetsId()!;
     const sheetName = await resolveSheetTabName(spreadsheetId);
 
-    const { data: r } = await supabase
-      .from("parking_requests")
-      .select(
-        `*, department:departments(name_th), requested_location:locations(name_th),
-         receiving_officer:security_officers(name_th),
-         created_by_profile:profiles!created_by(display_name),
-         request_dates(request_date,start_time,end_time)`,
-      )
-      .eq("id", requestId)
-      .maybeSingle();
-
-    if (!r) return;
-
-    const firstDate = (r.request_dates as any[])[0] ?? null;
-    const firstDateStr: string | null = firstDate?.request_date ?? r.received_date ?? null;
-    const startStr = firstDate ? formatTimeThDot(firstDate.start_time) : "";
-    const endStr = firstDate ? formatTimeThDot(firstDate.end_time) : "";
-    const timeRange = startStr && endStr ? `${startStr}-${endStr}` : startStr || endStr || "";
-
-    const mirror: LiveSheetRequest = {
-      id: r.id,
-      request_no: r.request_no,
-      received_date: (r as any).received_date ?? null,
-      department_name: (r as any).department?.name_th ?? null,
-      official_letter_no: r.official_letter_no,
-      first_date: firstDateStr,
-      time_range: timeRange || null,
-      cars_count: r.cars_count,
-      location_name: (r as any).requested_location?.name_th ?? (r as any).requested_location_text ?? null,
-      legacy_officer_name:
-        (r as { receiving_officer?: { name_th?: string } | null }).receiving_officer?.name_th ??
-        (r as { legacy_officer_name?: string | null }).legacy_officer_name ??
-        null,
-      officer_display_name: (r as any).created_by_profile?.display_name ?? null,
-      status_label_th: STATUS_LABELS_TH[r.status as keyof typeof STATUS_LABELS_TH] ?? r.status,
-    };
+    const mirror = await fetchLiveSheetRequest(supabase, requestId);
+    if (!mirror) return;
 
     const rowValues = buildLiveSheetRow(mirror);
     await ensureSheetHeader(spreadsheetId, sheetName, [...LIVE_SHEET_HEADERS]);
 
-    const currentRow: number | null = (r as any).sheet_row ?? null;
+    const { data: syncState } = await supabase
+      .from("parking_requests")
+      .select("sheet_row")
+      .eq("id", requestId)
+      .maybeSingle();
+    const currentRow: number | null = (syncState as { sheet_row?: number | null } | null)?.sheet_row ?? null;
 
     let sheetRow: number | null;
     if (currentRow) {

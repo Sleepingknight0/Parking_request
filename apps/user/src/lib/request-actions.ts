@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@nacc/db/service";
+import { receivingOfficerDbFields } from "@nacc/db/queries";
 import {
   mergeSignOutputMetadata,
   requestFormSchema,
@@ -71,6 +72,7 @@ export async function createOfficerRequest(
   }
 
   const db = getUserAppDb();
+  const receivingOfficerFields = await receivingOfficerDbFields(db, v.receiving_officer_id);
   const { data: req, error } = await db
     .from("parking_requests")
     .insert({
@@ -82,6 +84,7 @@ export async function createOfficerRequest(
       subject: v.subject ?? null,
       contact_name: v.contact_name ?? null,
       contact_phone: v.contact_phone ?? null,
+      ...receivingOfficerFields,
       requested_location_id: v.requested_location_id ?? null,
       requested_location_text: v.requested_location_text ?? null,
       date_pattern: v.date_pattern,
@@ -145,6 +148,7 @@ export async function updateOfficerRequest(
   }
 
   const db = getUserAppDb();
+  const receivingOfficerFields = await receivingOfficerDbFields(db, v.receiving_officer_id);
   const patch: Record<string, unknown> = {
     department_id: v.department_id ?? profile.department_id ?? null,
     official_letter_no: v.official_letter_no,
@@ -153,6 +157,7 @@ export async function updateOfficerRequest(
     subject: v.subject ?? null,
     contact_name: v.contact_name ?? null,
     contact_phone: v.contact_phone ?? null,
+    ...receivingOfficerFields,
     requested_location_id: v.requested_location_id ?? null,
     requested_location_text: v.requested_location_text ?? null,
     date_pattern: v.date_pattern,

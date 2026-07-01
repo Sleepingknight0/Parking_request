@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@nacc/ui";
 import { TH } from "@nacc/types";
+import { getRequestById, listActiveSecurityOfficers } from "@nacc/db/queries";
 import { getUserAppDb } from "@/lib/user-db";
-import { getRequestById } from "@nacc/db/queries";
 import { OfficerRequestForm } from "@/components/officer-request-form";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export default async function EditOfficerRequestPage({
     Promise.all([
       supabase.from("departments").select("id,name_th").eq("is_active", true).order("name_th"),
       supabase.from("locations").select("id,name_th").eq("is_active", true).order("name_th"),
+      listActiveSecurityOfficers(supabase),
     ]),
   ]);
   if (!request) notFound();
@@ -26,7 +27,7 @@ export default async function EditOfficerRequestPage({
     redirect(`/officer/requests/${id}`);
   }
 
-  const [{ data: departments }, { data: locations }] = refs;
+  const [{ data: departments }, { data: locations }, securityOfficers] = refs;
   const existingOfficialLetterCount = request.request_attachments.filter(
     (attachment) => attachment.file_type === "official_letter",
   ).length;
@@ -42,6 +43,7 @@ export default async function EditOfficerRequestPage({
         requestId={id}
         departments={(departments ?? []) as { id: string; name_th: string }[]}
         locations={(locations ?? []) as { id: string; name_th: string }[]}
+        securityOfficers={securityOfficers}
         existingOfficialLetterCount={existingOfficialLetterCount}
         initial={{
           department_id: request.department_id ?? "",
@@ -49,6 +51,7 @@ export default async function EditOfficerRequestPage({
           official_letter_date: request.official_letter_date ?? "",
           received_date: request.received_date ?? "",
           subject: request.subject ?? "",
+          receiving_officer_id: request.receiving_officer_id ?? "",
           contact_name: request.contact_name ?? "",
           contact_phone: request.contact_phone ?? "",
           requested_location_id: request.requested_location_id ?? "",

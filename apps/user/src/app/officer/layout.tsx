@@ -1,6 +1,5 @@
 import { requireAppMode } from "@/lib/user-guards";
 import { UserShell } from "@/components/user-shell";
-import { switchRole } from "@/lib/auth-actions";
 
 export default async function OfficerLayout({
   children,
@@ -13,7 +12,6 @@ export default async function OfficerLayout({
     <UserShell
       profile={{ display_name: displayName }}
       mode="officer"
-      switchRole={switchRole}
     >
       {children}
     </UserShell>

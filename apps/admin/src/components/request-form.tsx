@@ -45,6 +45,7 @@ type Scalars = {
   official_letter_date: string;
   received_date: string;
   subject: string;
+  receiving_officer_id: string;
   contact_name: string;
   contact_phone: string;
   requested_location_id: string;
@@ -77,12 +78,14 @@ export function RequestForm({
   requestId,
   departments,
   locations,
+  securityOfficers = [],
   initial,
 }: {
   mode: "create" | "edit";
   requestId?: string;
   departments: { id: string; name_th: string }[];
   locations: { id: string; name_th: string }[];
+  securityOfficers?: { id: string; name_th: string }[];
   initial?: RequestFormInitial;
 }) {
   const router = useRouter();
@@ -116,6 +119,9 @@ export function RequestForm({
       official_letter_date: initial?.official_letter_date ?? "",
       received_date: initial?.received_date ?? todayISO(),
       subject: initial?.subject ?? "",
+      receiving_officer_id: initial?.receiving_officer_id
+        ? initial.receiving_officer_id
+        : SELECT_NONE,
       contact_name: initial?.contact_name ?? "",
       contact_phone: initial?.contact_phone ?? "",
       requested_location_id: initial?.requested_location_id
@@ -150,6 +156,8 @@ export function RequestForm({
     return {
       ...values,
       department_id: values.department_id === SELECT_NONE ? "" : values.department_id,
+      receiving_officer_id:
+        values.receiving_officer_id === SELECT_NONE ? "" : values.receiving_officer_id,
       requested_location_id:
         values.requested_location_id === SELECT_NONE ? "" : values.requested_location_id,
       cars_count: Number(values.cars_count),
@@ -246,6 +254,34 @@ export function RequestForm({
           </Field>
           <Field label={TH.entity.subject} className="sm:col-span-2">
             <Input {...register("subject")} placeholder="เรื่องที่ขอใช้ที่จอดรถ" />
+          </Field>
+          <Field label={TH.entity.receivingOfficer} className="sm:col-span-2">
+            <Controller
+              control={control}
+              name="receiving_officer_id"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกเจ้าหน้าที่ที่รับเรื่อง" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value={SELECT_NONE}>เลือกเจ้าหน้าที่ที่รับเรื่อง</SelectItem>
+                    {securityOfficers.map((officer) => (
+                      <SelectItem key={officer.id} value={officer.id}>
+                        {officer.name_th}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {securityOfficers.length === 0 ? (
+              <p className="mt-1.5 text-xs text-amber-700">
+                ยังไม่มีรายชื่อในระบบ — {TH.comms.receivingOfficerHint}
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted-foreground">{TH.comms.receivingOfficerHint}</p>
+            )}
           </Field>
           {FEATURE_FLAGS.contactFields ? (
             <>

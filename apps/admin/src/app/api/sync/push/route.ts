@@ -9,7 +9,6 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@nacc/db/service";
-import { STATUS_LABELS_TH } from "@nacc/types";
 import {
   appendSheetRow,
   updateSheetRow,
@@ -21,11 +20,10 @@ import {
 } from "@nacc/storage";
 import {
   buildLiveSheetRow,
-  formatTimeThDot,
   LIVE_SHEET_HEADERS,
-  type LiveSheetRequest,
 } from "@nacc/utils";
 import { removeRequestFromSheet } from "@/lib/sheet-sync";
+import { fetchLiveSheetRequest } from "@/lib/sheet-row";
 
 export const dynamic = "force-dynamic";
 
@@ -77,50 +75,14 @@ export async function POST(req: NextRequest) {
   const spreadsheetId = googleSheetsId()!;
   const sheetName = await resolveSheetTabName(spreadsheetId);
 
-  // ── Fetch full request with joins ─────────────────────────────────────────
-  const { data: req_, error: fetchErr } = await supabase
-    .from("parking_requests")
-    .select(
-      `*, department:departments(name_th), requested_location:locations(name_th),
-       created_by_profile:profiles!created_by(display_name),
-       request_dates(request_date,start_time,end_time)`,
-    )
-    .eq("id", requestId)
-    .maybeSingle();
-
-  if (fetchErr || !req_) {
+  // ── Fetch full request mirror with joins ──────────────────────────────────
+  const mirror = await fetchLiveSheetRequest(supabase, requestId);
+  if (!mirror) {
     return NextResponse.json(
-      { error: fetchErr?.message ?? "Request not found" },
+      { error: "Request not found" },
       { status: 404 },
     );
   }
-
-  const r = req_ as any;
-
-  // ── Build the first date + time_range ────────────────────────────────────
-  const firstDate = (r.request_dates as any[])[0] ?? null;
-  const firstDateStr: string | null = firstDate?.request_date ?? r.received_date ?? null;
-  const startStr = firstDate ? formatTimeThDot(firstDate.start_time) : "";
-  const endStr = firstDate ? formatTimeThDot(firstDate.end_time) : "";
-  const timeRange = startStr && endStr ? `${startStr}-${endStr}` : startStr || endStr || "";
-
-  const locationName: string | null =
-    r.requested_location?.name_th ?? r.requested_location_text ?? null;
-
-  const mirror: LiveSheetRequest = {
-    id: r.id,
-    request_no: r.request_no,
-    received_date: r.received_date,
-    department_name: r.department?.name_th ?? null,
-    official_letter_no: r.official_letter_no,
-    first_date: firstDateStr,
-    time_range: timeRange || null,
-    cars_count: r.cars_count,
-    location_name: locationName,
-    legacy_officer_name: r.legacy_officer_name ?? null,
-    officer_display_name: r.created_by_profile?.display_name ?? null,
-    status_label_th: STATUS_LABELS_TH[r.status as keyof typeof STATUS_LABELS_TH] ?? r.status,
-  };
 
   const rowValues = buildLiveSheetRow(mirror);
 
@@ -128,7 +90,12 @@ export async function POST(req: NextRequest) {
   await ensureSheetHeader(spreadsheetId, sheetName, [...LIVE_SHEET_HEADERS]);
 
   // ── Append or update ──────────────────────────────────────────────────────
-  let sheetRow: number | null = (r.sheet_row as number | null) ?? null;
+  const { data: syncState } = await supabase
+    .from("parking_requests")
+    .select("sheet_row")
+    .eq("id", requestId)
+    .maybeSingle();
+  let sheetRow: number | null = (syncState as { sheet_row?: number | null } | null)?.sheet_row ?? null;
 
   if (sheetRow) {
     await updateSheetRow(spreadsheetId, sheetName, sheetRow, rowValues);

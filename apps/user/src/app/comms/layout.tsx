@@ -1,6 +1,5 @@
 import { requireAppMode } from "@/lib/user-guards";
 import { UserShell } from "@/components/user-shell";
-import { switchRole } from "@/lib/auth-actions";
 
 export default async function CommsLayout({
   children,
@@ -13,7 +12,6 @@ export default async function CommsLayout({
     <UserShell
       profile={{ display_name: displayName }}
       mode="comms"
-      switchRole={switchRole}
     >
       {children}
     </UserShell>

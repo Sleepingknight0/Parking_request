@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@nacc/db/server";
+import { receivingOfficerDbFields } from "@nacc/db/queries";
 import { syncRequestToSheet, removeRequestFromSheet } from "./sheet-sync";
 import { createServiceClient } from "@nacc/db/service";
 import { hasSupabaseServiceKey, SUPABASE_SERVICE_KEY_ERROR_TH } from "@nacc/db";
@@ -63,6 +64,7 @@ export async function createRequest(
   }
 
   const supabase = await createServerSupabase();
+  const receivingOfficerFields = await receivingOfficerDbFields(supabase, v.receiving_officer_id);
   const { data: req, error } = await supabase
     .from("parking_requests")
     .insert({
@@ -74,6 +76,7 @@ export async function createRequest(
       subject: v.subject ?? null,
       contact_name: v.contact_name ?? null,
       contact_phone: v.contact_phone ?? null,
+      ...receivingOfficerFields,
       requested_location_id: v.requested_location_id ?? null,
       requested_location_text: v.requested_location_text ?? null,
       date_pattern: v.date_pattern,
@@ -126,6 +129,7 @@ export async function updateRequest(
   const v = parsed.data;
 
   const supabase = await createServerSupabase();
+  const receivingOfficer = await receivingOfficerDbFields(supabase, v.receiving_officer_id);
   const { error } = await supabase
     .from("parking_requests")
     .update({
@@ -136,6 +140,7 @@ export async function updateRequest(
       subject: v.subject ?? null,
       contact_name: v.contact_name ?? null,
       contact_phone: v.contact_phone ?? null,
+      ...receivingOfficer,
       requested_location_id: v.requested_location_id ?? null,
       requested_location_text: v.requested_location_text ?? null,
       date_pattern: v.date_pattern,

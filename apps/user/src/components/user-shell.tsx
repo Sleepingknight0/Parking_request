@@ -22,6 +22,8 @@ import { TH } from "@nacc/types";
 import { USER_MODE_LABELS_TH, type UserAppMode } from "@/lib/user-mode";
 import { RealtimeRefresh } from "./realtime-refresh";
 
+const SWITCH_ROLE_ACTION = "/api/auth/switch-role";
+
 interface NavItem {
   href: string;
   label: string;
@@ -62,12 +64,10 @@ function isNavItemActive(pathname: string, href: string, nav: NavItem[]): boolea
 
 export function UserShell({
   mode,
-  switchRole,
   children,
 }: {
   profile: { display_name: string };
   mode: UserAppMode;
-  switchRole: () => Promise<void>;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -124,7 +124,7 @@ export function UserShell({
         <div className="border-b border-border">{brand}</div>
         <div className="flex-1 overflow-y-auto">{navList(false)}</div>
         <div className="border-t border-border p-3">
-          <form action={switchRole}>
+          <form action={SWITCH_ROLE_ACTION} method="POST">
             <Button type="submit" variant="outline" className="w-full gap-2">
               <ArrowLeftRight className="h-4 w-4" />
               เปลี่ยนบทบาท
@@ -145,7 +145,7 @@ export function UserShell({
             </div>
             <div className="flex-1 overflow-y-auto">{navList(true)}</div>
             <div className="border-t border-border p-3">
-              <form action={switchRole}>
+              <form action={SWITCH_ROLE_ACTION} method="POST">
                 <Button type="submit" variant="outline" className="w-full gap-2">
                   <ArrowLeftRight className="h-4 w-4" />
                   เปลี่ยนบทบาท
@@ -162,7 +162,7 @@ export function UserShell({
             <Menu className="h-5 w-5" />
           </Button>
           <div className="ml-auto lg:hidden">
-            <form action={switchRole}>
+            <form action={SWITCH_ROLE_ACTION} method="POST">
               <Button type="submit" variant="outline" size="sm" className="gap-1.5 text-xs">
                 <ArrowLeftRight className="h-4 w-4" />
                 เปลี่ยนบทบาท

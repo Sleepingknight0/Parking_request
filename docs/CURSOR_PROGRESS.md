@@ -710,30 +710,40 @@
 - `pnpm lint` — pass
 - `pnpm typecheck` — pass
 
-## 2026-06-25 — ปิดฟีเจอร์แนบหนังสือ/ผู้ประสานงาน + dropdown ขั้นตอนเอกสาร
+## 2026-06-25 — เจ้าหน้าที่ที่รับเรื่อง (ฝ่ายสื่อสาร)
 
 ### Done
 
-- `packages/types/src/feature-flags.ts` — ปิดชั่วคราว (โค้ดยังอยู่):
-  - `officialLetterAttachments`
-  - `officialLetterRequired`
-  - `officialLetterIndicators`
-  - `contactFields`
-- ซ่อน UI แนบไฟล์หนังสือราชการ, badge/บังคับแนบไฟล์, ฟิลด์ผู้ประสานงาน/เบอร์โทร ทุกฝั่ง admin / officer / comms (รปภ. ยังแนบรูปส่งงานได้ตามเดิม)
-- Dropdown **ขั้นตอนเอกสาร** 5 ขั้น (map สถานะ DB เดิม):
-  1. รออนุมัติ → `under_review` / `submitted`
-  2. อนุมัติแล้ว → `approved`
-  3. รอดำเนินการ → `assigned`
-  4. ยืนยันการจัดที่จอดรถ → `in_progress`
-  5. เสร็จสิ้น → `completed`
-- ฟอร์มสร้างคำขอ (admin / officer / comms): เลือกขั้นตอนก่อนส่ง
-- หน้ารายละเอียด (admin / officer / comms): แก้ไขขั้นตอนในปanel ประวัติ
-- `walkToDocumentProgress` — เดิน transition ทีละขั้นตาม DB trigger
-- ฝั่ง รปภ. **ไม่มี** dropdown ขั้นตอน (ตามที่ขอ)
+- Migration `0011_security_officers.sql` — ตาราง `security_officers` + FK `receiving_officer_id` (seed 13 รายชื่อ)
+- Admin: เมนู **เจ้าหน้าที่รับเรื่อง** (`/security-officers`)
+- Comms form: dropdown ใต้ช่อง **เรื่อง** + ข้อความแนะนำให้ Admin เพิ่มชื่อ
+- Sheet sync column H ใช้ชื่อจาก `receiving_officer` / `legacy_officer_name`
 
-### Re-enable later
+### Deploy note
 
-ตั้งค่าใน `packages/types/src/feature-flags.ts` เป็น `true` เมื่อพร้อมใช้งาน
+- รัน migration บน Supabase: `pnpm db:push` (ต้อง `supabase link` ก่อน)
+
+### Checks
+
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass
+- `pnpm --filter @nacc/user test` — 17/17 pass
+
+## 2026-06-25 — เจ้าหน้าที่ที่รับเรื่อง (ทุกฟอร์มบันทึกหนังสือ)
+
+### Done
+
+- Dropdown **เจ้าหน้าที่ที่รับเรื่อง** แสดงในทุกฟอร์มบันทึกหนังสือ: officer, comms, admin (create + edit)
+- ลบเงื่อนไข `isComms` ใน `officer-request-form.tsx`
+- บันทึก `receiving_officer_id` + `legacy_officer_name` ใน officer/admin request actions
+- Helper ร่วม: `listActiveSecurityOfficers`, `receivingOfficerDbFields` ใน `packages/db/queries.ts`
+- หน้ารายละเอียด officer แสดงชื่อเจ้าหน้าที่ที่รับเรื่อง
+- Migration `0011` apply บน Supabase hosted แล้ว (ตาราง + seed 13 รายชื่อ)
+
+### สาเหตุ Local dropdown ว่าง (ก่อนแก้)
+
+1. Migration ยังไม่ถูก apply บน DB จริง → ตาราง `security_officers` ไม่มี
+2. โค้ดเดิมแสดง dropdown เฉพาะโหมด comms เท่านั้น
 
 ### Checks
 

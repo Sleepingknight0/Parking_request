@@ -4,7 +4,9 @@
 
 ---
 
-## Column layout (A – K)
+## Column layout (A – AN)
+
+Columns A-K stay compatible with the old Streamlit/Google Sheet workflow. Column K remains the Supabase UUID used by Apps Script. Columns L-AN are a detailed Supabase mirror so the Sheet has the same operational context as the app.
 
 | Col | Thai header | Direction | Notes |
 |-----|-------------|-----------|-------|
@@ -19,6 +21,35 @@
 | I | สถานะ | Supabase → Sheet | Auto-updated; do not edit |
 | J | เลขที่คำขอ | Supabase → Sheet | PRK-... auto number |
 | K | _id | System | Supabase UUID; can hide column but do NOT delete |
+| L | วันที่หนังสือ | Supabase → Sheet | Read-only mirror |
+| M | เรื่อง | Supabase → Sheet | Read-only mirror |
+| N | รูปแบบวันที่ | Supabase → Sheet | Read-only mirror |
+| O | วันที่จอดทั้งหมด | Supabase → Sheet | Multiple dates separated by line breaks |
+| P | เวลาเริ่ม | Supabase → Sheet | Multiple rows separated by line breaks |
+| Q | เวลาสิ้นสุด | Supabase → Sheet | Multiple rows separated by line breaks |
+| R | ทะเบียนรถทั้งหมด | Supabase → Sheet | Multiple plates separated by line breaks |
+| S | หมายเหตุรถ | Supabase → Sheet | Multiple notes separated by line breaks |
+| T | สถานที่จากรายการ | Supabase → Sheet | Location reference name |
+| U | สถานที่ระบุเอง | Supabase → Sheet | Free-text location |
+| V | เหตุผล/รายละเอียด | Supabase → Sheet | Read-only mirror |
+| W | ความสำคัญ | Supabase → Sheet | Read-only mirror |
+| X | ผู้สร้างรายการ | Supabase → Sheet | Profile display name |
+| Y | ผู้รับผิดชอบ รปภ. | Supabase → Sheet | Assigned staff profile |
+| Z | วันที่มอบหมาย | Supabase → Sheet | Read-only mirror |
+| AA | ผู้อนุมัติ | Supabase → Sheet | Read-only mirror |
+| AB | วันที่อนุมัติ | Supabase → Sheet | Read-only mirror |
+| AC | ผู้ยกเลิก | Supabase → Sheet | Read-only mirror |
+| AD | วันที่ยกเลิก | Supabase → Sheet | Read-only mirror |
+| AE | เหตุผลยกเลิก | Supabase → Sheet | Read-only mirror |
+| AF | ผู้ส่งงาน | Supabase → Sheet | Read-only mirror |
+| AG | วันที่เสร็จ | Supabase → Sheet | Read-only mirror |
+| AH | หมายเหตุส่งงาน | Supabase → Sheet | Read-only mirror |
+| AI | สื่อสารยืนยันงาน | Supabase → Sheet | Read-only mirror |
+| AJ | วันที่สื่อสารยืนยัน | Supabase → Sheet | Read-only mirror |
+| AK | จำนวนไฟล์แนบ | Supabase → Sheet | Count from `request_attachments` |
+| AL | จำนวนรูปส่งงาน | Supabase → Sheet | Count of `completion_photo` attachments |
+| AM | วันที่สร้าง | Supabase → Sheet | Read-only mirror |
+| AN | วันที่แก้ไขล่าสุด | Supabase → Sheet | Read-only mirror |
 
 Row 1 = header. Data starts at row 2. The system writes the header automatically on first sync.
 
@@ -73,7 +104,7 @@ curl -X POST http://localhost:3000/api/sync/backfill \
   -H "x-sync-secret: change-me-before-deploy"
 ```
 
-This reads all Sheet rows, matches each by `เลขหนังสือ` column C, fills in columns I–K with status/request_no/UUID, and writes `sheet_row` back to the DB.
+This reads all Sheet rows, matches each by `เลขหนังสือ` column C, fills the full A-AN mirror row from Supabase, and writes `sheet_row` back to the DB.
 
 ### 6. Install Google Apps Script (Sheet → Supabase direction)
 
@@ -91,8 +122,9 @@ const SHEET_NAME = "ชีต1";
 const ID_COLUMN = 11;   // Column K (1-indexed)
 const HEADER_ROW = 1;
 
-// Read-only columns — edits here must NOT be sent to Supabase
-const READ_ONLY_COLS = new Set([1, 9, 10, 11]); // A=1, I=9, J=10, K=11
+// Only B-H are editable from Sheet → Supabase.
+// A, I-K, and all detailed mirror columns L-AN are Supabase-managed.
+const EDITABLE_COLS = new Set([2, 3, 4, 5, 6, 7, 8]); // B-H
 
 function onEditHandler(e) {
   try {
@@ -102,7 +134,7 @@ function onEditHandler(e) {
     const row = e.range.getRow();
     const col = e.range.getColumn();
     if (row <= HEADER_ROW) return;
-    if (READ_ONLY_COLS.has(col)) return;
+    if (!EDITABLE_COLS.has(col)) return;
 
     // Get the Supabase UUID from column K
     const id = sheet.getRange(row, ID_COLUMN).getValue();
@@ -167,7 +199,7 @@ function runBackfill() {
 ```
 Admin action (create/update/status change)
   └─ syncRequestToSheet(id)          [apps/admin/src/lib/sheet-sync.ts]
-       └─ fetch request from Supabase (with joins)
+       └─ fetch request from Supabase (with joins, dates, plates, attachments)
        └─ buildLiveSheetRow()        [packages/utils/google-sheet-mapping.ts]
        └─ appendSheetRow() if new    [packages/storage/google-sheets.ts]
           OR updateSheetRow() if sheet_row already set
@@ -200,7 +232,7 @@ This triggers `/api/sync/push` which does the same push as `sheet-sync.ts` but i
 
 Supabase wins on conflict. Sheet edits flow immediately to Supabase; if Supabase already changed since the last Sheet refresh, the DB value is authoritative.
 
-`sheet_sync_logs` table stores all push/pull events for debugging.
+`sheet_sync_logs` table stores all push/pull events for debugging. Supabase remains the source of truth for detailed columns L-AN; edit those fields in the app, then run backfill or wait for webhook push.
 
 ---
 
@@ -223,5 +255,5 @@ GOOGLE_DRIVE_PRIVATE_KEY=<full private key including -----BEGIN/END PRIVATE KEY-
 | Sheet not updating | Sheets API enabled? Sheet shared with service account? `GOOGLE_SHEETS_ID` correct? |
 | Apps Script not sending | `installTrigger()` run? Secret matches? App URL correct? Check Apps Script execution log. |
 | Backfill skips rows | Row must have a matching `เลขหนังสือ` value in Supabase's `official_letter_no` |
-| `Cannot insert into read-only column` | Apps Script trying to write col A/I/J/K — verify `READ_ONLY_COLS` set |
+| `Cannot insert into read-only column` | Apps Script trying to write a managed column — verify `EDITABLE_COLS` only includes B-H |
 | Duplicate `sheet_row` error | Two records matched same row — run backfill again; or manually clear `sheet_row` in SQL |

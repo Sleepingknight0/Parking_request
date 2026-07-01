@@ -20,8 +20,14 @@ config({ path: path.resolve(process.cwd(), "apps/admin/.env.local"), override: f
 
 import { createClient } from "@supabase/supabase-js";
 import { google } from "googleapis";
-import { STATUS_LABELS_TH } from "@nacc/types";
-import { LIVE_SHEET_HEADERS, formatTimeThDot } from "@nacc/utils";
+import {
+  DATE_PATTERN_LABELS_TH,
+  PRIORITY_LABELS_TH,
+  STATUS_LABELS_TH,
+  type DatePattern,
+  type Priority,
+} from "@nacc/types";
+import { buildLiveSheetRow, LIVE_SHEET_HEADERS, formatTimeThDot, type LiveSheetRequest } from "@nacc/utils";
 
 // ─── Env ──────────────────────────────────────────────────────────────────────
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -63,7 +69,12 @@ async function formatSheet(sheetId: number) {
   const SYSTEM = rgb(55,  65,  81);
   const TEAL   = rgb(17,  94,  89);
   const LIGHT  = { style: "SOLID" as const, color: rgb(229, 231, 235) };
-  const colWidths = [110, 280, 130, 110, 130, 75, 195, 175, 135, 145, 50];
+  const colWidths = [
+    110, 280, 130, 110, 130, 75, 195, 175, 135, 145, 50,
+    110, 220, 120, 180, 90, 90, 180, 180, 180, 180, 240, 95,
+    160, 160, 150, 160, 150, 160, 150, 220, 160, 150, 220,
+    160, 150, 95, 95, 150, 150,
+  ];
   const statusColors = [
     { label: "แบบร่าง",           bg: rgb(209,213,219) },
     { label: "บันทึกหนังสือแล้ว", bg: rgb(191,219,254) },
@@ -104,9 +115,17 @@ async function formatSheet(sheetId: number) {
           textFormat: { foregroundColor: WHITE, bold: true, fontSize: 9 },
           horizontalAlignment: "CENTER", verticalAlignment: "MIDDLE" } },
         fields: "userEnteredFormat" } },
+    // Header L1:AN1 — system mirror details
+    { repeatCell: {
+        range: { sheetId, startRowIndex:0, endRowIndex:1, startColumnIndex:11, endColumnIndex:LIVE_SHEET_HEADERS.length },
+        cell: { userEnteredFormat: {
+          backgroundColor: SYSTEM,
+          textFormat: { foregroundColor: WHITE, bold: true, fontSize: 9 },
+          horizontalAlignment: "CENTER", verticalAlignment: "MIDDLE", wrapStrategy: "WRAP" } },
+        fields: "userEnteredFormat" } },
     // Data rows base style
     { repeatCell: {
-        range: { sheetId, startRowIndex:1, endRowIndex:2000, startColumnIndex:0, endColumnIndex:11 },
+        range: { sheetId, startRowIndex:1, endRowIndex:2000, startColumnIndex:0, endColumnIndex:LIVE_SHEET_HEADERS.length },
         cell: { userEnteredFormat: {
           textFormat: { fontSize: 10 }, verticalAlignment: "MIDDLE", wrapStrategy: "WRAP",
           borders: { bottom: LIGHT, right: LIGHT } } },
@@ -159,6 +178,23 @@ async function main() {
     process.exit(1);
   }
   const sheetId = sheetMeta.properties?.sheetId ?? 0;
+  const columnCount = sheetMeta.properties?.gridProperties?.columnCount ?? 0;
+  if (columnCount < LIVE_SHEET_HEADERS.length) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: GS_ID,
+      requestBody: {
+        requests: [
+          {
+            appendDimension: {
+              sheetId,
+              dimension: "COLUMNS",
+              length: LIVE_SHEET_HEADERS.length - columnCount,
+            },
+          },
+        ],
+      },
+    });
+  }
 
   // 2. Clear existing conditional formats first
   const existingRules = sheetMeta.conditionalFormats?.length ?? 0;
@@ -176,7 +212,7 @@ async function main() {
   // 4. Write header row
   await sheets.spreadsheets.values.update({
     spreadsheetId: GS_ID,
-    range: `${GS_TAB}!A1:K1`,
+    range: `${GS_TAB}!A1:AN1`,
     valueInputOption: "RAW",
     requestBody: { values: [[...LIVE_SHEET_HEADERS]] },
   });
@@ -187,12 +223,23 @@ async function main() {
     .from("parking_requests")
     .select(`
       id, request_no, official_letter_no, received_date,
-      cars_count, requested_location_text, legacy_officer_name,
-      status, sheet_row,
+      official_letter_date, subject, date_pattern, cars_count,
+      requested_location_text, legacy_officer_name, purpose, priority,
+      status, sheet_row, assigned_at, approved_at, cancelled_at,
+      cancellation_reason, completed_at, completion_note, comms_verified_at,
+      created_at, updated_at,
       department:departments(name_th),
       requested_location:locations(name_th),
+      receiving_officer:security_officers(name_th),
       created_by_profile:profiles!created_by(display_name),
-      request_dates(request_date,start_time,end_time)
+      assigned_to_profile:profiles!assigned_to(display_name),
+      approved_by_profile:profiles!approved_by(display_name),
+      cancelled_by_profile:profiles!cancelled_by(display_name),
+      completed_by_profile:profiles!completed_by(display_name),
+      comms_verified_by_profile:profiles!comms_verified_by(display_name),
+      request_dates(request_date,start_time,end_time),
+      request_license_plates(plate_no,vehicle_note),
+      request_attachments(file_type)
     `)
     .order("received_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
@@ -205,40 +252,73 @@ async function main() {
   // 6. Clear old data rows
   await sheets.spreadsheets.values.clear({
     spreadsheetId: GS_ID,
-    range: `${GS_TAB}!A2:K2000`,
+    range: `${GS_TAB}!A2:AN2000`,
   });
 
   // 7. Build all rows
   const rows: (string | number | null)[][] = requests.map((r: any) => {
-    const dates   = (r.request_dates ?? []) as any[];
+    const dates   = ([...(r.request_dates ?? [])] as any[])
+      .sort((a, b) => String(a.request_date ?? "").localeCompare(String(b.request_date ?? "")));
     const first   = dates[0] ?? null;
     const startTh = formatTimeThDot(first?.start_time);
     const endTh   = formatTimeThDot(first?.end_time);
     const time    = startTh && endTh ? `${startTh}-${endTh}` : startTh || endTh || "";
     const loc     = r.requested_location?.name_th ?? r.requested_location_text ?? "";
-    const officer = r.legacy_officer_name ?? r.created_by_profile?.display_name ?? "";
+    const officer = r.receiving_officer?.name_th ?? r.legacy_officer_name ?? r.created_by_profile?.display_name ?? "";
     const status  = STATUS_LABELS_TH[r.status as keyof typeof STATUS_LABELS_TH] ?? r.status;
-
-    return [
-      r.received_date ?? "",          // A
-      r.department?.name_th ?? "",    // B
-      r.official_letter_no ?? "",     // C
-      first?.request_date ?? "",      // D
-      time,                           // E
-      r.cars_count,                   // F
-      loc,                            // G
-      officer,                        // H
-      status,                         // I
-      r.request_no,                   // J
-      r.id,                           // K
-    ];
+    const plates = (r.request_license_plates ?? []) as Array<{ plate_no?: string; vehicle_note?: string | null }>;
+    const attachments = (r.request_attachments ?? []) as Array<{ file_type?: string | null }>;
+    const mirror: LiveSheetRequest = {
+      id: r.id,
+      request_no: r.request_no,
+      received_date: r.received_date ?? null,
+      department_name: r.department?.name_th ?? null,
+      official_letter_no: r.official_letter_no ?? "",
+      first_date: first?.request_date ?? r.received_date ?? null,
+      time_range: time || null,
+      cars_count: r.cars_count,
+      location_name: loc || null,
+      legacy_officer_name: officer || null,
+      officer_display_name: r.created_by_profile?.display_name ?? null,
+      status_label_th: status,
+      official_letter_date: r.official_letter_date ?? null,
+      subject: r.subject ?? null,
+      date_pattern_label_th: DATE_PATTERN_LABELS_TH[r.date_pattern as DatePattern] ?? r.date_pattern ?? null,
+      all_dates: dates.map((d) => d.request_date).filter(Boolean).join("\n") || null,
+      start_time: dates.map((d) => formatTimeThDot(d.start_time)).filter(Boolean).join("\n") || null,
+      end_time: dates.map((d) => formatTimeThDot(d.end_time)).filter(Boolean).join("\n") || null,
+      license_plates: plates.map((p) => p.plate_no).filter(Boolean).join("\n") || null,
+      vehicle_notes: plates.map((p) => p.vehicle_note).filter(Boolean).join("\n") || null,
+      location_choice_name: r.requested_location?.name_th ?? null,
+      requested_location_text: r.requested_location_text ?? null,
+      purpose: r.purpose ?? null,
+      priority_label_th: PRIORITY_LABELS_TH[r.priority as Priority] ?? r.priority ?? null,
+      created_by_display_name: r.created_by_profile?.display_name ?? null,
+      assigned_to_display_name: r.assigned_to_profile?.display_name ?? null,
+      assigned_at: r.assigned_at ?? null,
+      approved_by_display_name: r.approved_by_profile?.display_name ?? null,
+      approved_at: r.approved_at ?? null,
+      cancelled_by_display_name: r.cancelled_by_profile?.display_name ?? null,
+      cancelled_at: r.cancelled_at ?? null,
+      cancellation_reason: r.cancellation_reason ?? null,
+      completed_by_display_name: r.completed_by_profile?.display_name ?? null,
+      completed_at: r.completed_at ?? null,
+      completion_note: r.completion_note ?? null,
+      comms_verified_by_display_name: r.comms_verified_by_profile?.display_name ?? null,
+      comms_verified_at: r.comms_verified_at ?? null,
+      attachment_count: attachments.length,
+      completion_photo_count: attachments.filter((a) => a.file_type === "completion_photo").length,
+      created_at: r.created_at ?? null,
+      updated_at: r.updated_at ?? null,
+    };
+    return buildLiveSheetRow(mirror);
   });
 
   // 8. Write all rows at once
   if (rows.length) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: GS_ID,
-      range: `${GS_TAB}!A2:K${rows.length + 1}`,
+      range: `${GS_TAB}!A2:AN${rows.length + 1}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: rows },
     });

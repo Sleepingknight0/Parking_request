@@ -16,7 +16,7 @@ Authoritative implementation files:
 
 ## Source Of Truth
 
-Supabase PostgreSQL is the source of truth. Google Sheets is legacy input and a future reporting mirror only.
+Supabase PostgreSQL is the source of truth. Google Sheets is a live mirror/reporting surface for staff. Sheet edits are accepted only for the legacy-compatible operational columns B-H; all detailed mirror columns are pushed from Supabase.
 
 ## Main Entity
 
@@ -169,7 +169,12 @@ General audit/event log.
 
 ### sheet_sync_logs
 
-Future Google Sheets sync log.
+Google Sheets sync log for Supabase → Sheet pushes and Sheet → Supabase edits.
+
+Live Sheet layout keeps old columns A-K intact and appends detailed mirror columns L-AN:
+
+- A-K: old workflow columns plus status, request number, and Supabase UUID.
+- L-AN: official-letter date, subject, date pattern, all requested dates/times, license plates, locations, purpose, priority, actor/timestamp fields, attachment counts, and created/updated timestamps.
 
 ### request_counters
 

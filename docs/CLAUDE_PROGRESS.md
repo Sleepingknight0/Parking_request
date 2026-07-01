@@ -200,3 +200,27 @@ Remaining to be usable end-to-end:
 
 - `/comms/dashboard` ใช้ `CommsRequestsList` พร้อมแท็บ **ต้องจัดการ** เป็นค่าเริ่มต้น
 - แท็บกรองสถานะ + ค้นหา + การ์ดมือถือเหมือนหน้า `/comms/requests`
+
+## 2026-07-01 — Codex: ขยาย Google Sheets mirror ให้ละเอียดขึ้น
+
+- ตรวจงาน Cursor ก่อนแก้:
+  - `FEATURE_FLAGS` ปิดฟีเจอร์แนบหนังสือราชการ, บังคับแนบไฟล์, badge เตือนไฟล์, และฟิลด์ผู้ประสานงาน/เบอร์โทรไว้แล้ว
+  - dropdown ขั้นตอนเอกสารมีใน admin / officer / comms และไม่มีในฝั่ง รปภ.
+- ขยาย Google Sheets live mirror จาก A-K เป็น A-AN โดยคง A-K เดิมไว้เพื่อไม่ทำลาย Sheet/Apps Script เก่า
+- เพิ่มคอลัมน์รายละเอียดจาก Supabase: วันที่หนังสือ, เรื่อง, รูปแบบวันที่, วันที่จอดทั้งหมด, เวลาเริ่ม/สิ้นสุด, ทะเบียน, สถานที่, เหตุผล, priority, ผู้สร้าง, ผู้รับผิดชอบ, ผู้อนุมัติ, ยกเลิก, ส่งงาน, comms verification, จำนวนไฟล์แนบ, จำนวนรูปส่งงาน, created/updated timestamps
+- เพิ่ม `apps/admin/src/lib/sheet-row.ts` เป็น helper กลางสำหรับสร้าง `LiveSheetRequest` จาก Supabase joins เพื่อให้ `sheet-sync.ts`, `/api/sync/push`, และ `/api/sync/backfill` ใช้ row shape เดียวกัน
+- ปรับ `packages/storage/src/google-sheets.ts` และ `scripts/push-to-sheet.ts` ให้เขียน/อ่าน/format ช่วง A-AN แทน A-K
+- อัปเดต `docs/GOOGLE_SHEETS_SYNC_PLAN.md` และ `docs/DATABASE_CONTRACT.md` ให้ระบุว่า Supabase เป็น source of truth; Sheet แก้กลับได้เฉพาะ B-H ส่วน L-AN เป็น mirror รายละเอียดจาก Supabase
+
+Verification:
+
+- `pnpm typecheck` passed
+- `pnpm lint` passed
+
+Follow-up debug:
+
+- Ran `pnpm push:sheet`; first run failed because the live Google Sheet only had 26 columns while the new mirror writes through column AN.
+- Added column-count expansion before formatting/writing in `scripts/push-to-sheet.ts` and `packages/storage/src/google-sheets.ts`.
+- Re-ran `pnpm push:sheet`; it succeeded and updated the live Sheet header to A-AN.
+- Confirmed linked Supabase project `pgwpmmmsdobwvxcwlleu` currently has `parking_requests_count = 0`, so there are no request rows to push yet.
+- Re-verified `pnpm typecheck` and `pnpm lint` pass.

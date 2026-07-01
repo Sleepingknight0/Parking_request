@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader, Button } from "@nacc/ui";
 import { TH, type DatePattern } from "@nacc/types";
 import { createServerSupabase } from "@nacc/db/server";
-import { getRequestById } from "@nacc/db/queries";
+import { getRequestById, listActiveSecurityOfficers } from "@nacc/db/queries";
 import { requireProfile } from "@nacc/auth/guards";
 import { RequestForm } from "@/components/request-form";
 
@@ -17,12 +17,16 @@ export default async function EditRequestPage({
   await requireProfile({ roles: ["super_admin", "admin"] });
   const { id } = await params;
   const supabase = await createServerSupabase();
-  const [request, { data: departments }, { data: locations }] = await Promise.all([
+  const [request, refs] = await Promise.all([
     getRequestById(supabase, id),
-    supabase.from("departments").select("id,name_th").eq("is_active", true).order("name_th"),
-    supabase.from("locations").select("id,name_th").eq("is_active", true).order("name_th"),
+    Promise.all([
+      supabase.from("departments").select("id,name_th").eq("is_active", true).order("name_th"),
+      supabase.from("locations").select("id,name_th").eq("is_active", true).order("name_th"),
+      listActiveSecurityOfficers(supabase),
+    ]),
   ]);
   if (!request) notFound();
+  const [{ data: departments }, { data: locations }, securityOfficers] = refs;
 
   return (
     <>
@@ -39,12 +43,16 @@ export default async function EditRequestPage({
         requestId={id}
         departments={(departments ?? []) as { id: string; name_th: string }[]}
         locations={(locations ?? []) as { id: string; name_th: string }[]}
+        securityOfficers={securityOfficers}
         initial={{
           department_id: request.department_id ?? "",
           official_letter_no: request.official_letter_no,
           official_letter_date: request.official_letter_date ?? "",
           received_date: request.received_date ?? "",
           subject: request.subject ?? "",
+          receiving_officer_id: request.receiving_officer_id
+            ? request.receiving_officer_id
+            : "__none__",
           contact_name: request.contact_name ?? "",
           contact_phone: request.contact_phone ?? "",
           requested_location_id: request.requested_location_id ?? "",

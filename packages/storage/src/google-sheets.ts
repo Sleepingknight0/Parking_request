@@ -10,8 +10,10 @@ import { googleDriveClientEmail, googleDrivePrivateKey, googleSheetsGid, googleS
 // ─── Sheet layout (must match LIVE_SHEET_* in @nacc/utils) ───────────────────
 // A  วันที่รับเรื่อง  B สำนัก  C เลขหนังสือ  D วันที่จอด  E เวลาที่จอด
 // F  จำนวนรถ          G อาคาร  H เจ้าหน้าที่ I สถานะ     J เลขที่คำขอ  K _id
+// L..AN are detailed Supabase mirror columns.
 
-export const SHEET_COLS = 11;       // A..K
+export const SHEET_COLS = 40;       // A..AN
+export const SHEET_LAST_COL = "AN";
 export const SHEET_HEADER_ROW = 1;  // row 1 = headers; data starts at row 2
 
 export type SheetRowValues = (string | number | null)[];
@@ -37,6 +39,34 @@ export function sheetA1Range(sheetName: string, cellRange: string): string {
     return `${sheetName}!${cellRange}`;
   }
   return `'${escaped}'!${cellRange}`;
+}
+
+async function ensureSheetColumnCount(
+  spreadsheetId: string,
+  sheetName: string,
+  sheets = sheetsClient(),
+): Promise<number> {
+  const info = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheetMeta = info.data.sheets?.find((s) => s.properties?.title === sheetName);
+  const sheetId = sheetMeta?.properties?.sheetId ?? 0;
+  const columnCount = sheetMeta?.properties?.gridProperties?.columnCount ?? 0;
+  if (columnCount < SHEET_COLS) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            appendDimension: {
+              sheetId,
+              dimension: "COLUMNS",
+              length: SHEET_COLS - columnCount,
+            },
+          },
+        ],
+      },
+    });
+  }
+  return sheetId;
 }
 
 const tabNameCache = new Map<string, string>();
@@ -93,7 +123,7 @@ export async function getSheetRow(
   const sheets = sheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: sheetA1Range(sheetName, `A${rowNumber}:K${rowNumber}`),
+    range: sheetA1Range(sheetName, `A${rowNumber}:${SHEET_LAST_COL}${rowNumber}`),
   });
   return (res.data.values?.[0] as string[] | undefined) ?? [];
 }
@@ -109,7 +139,7 @@ export async function getAllSheetRows(
   const sheets = sheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: sheetA1Range(sheetName, "A2:K"),
+    range: sheetA1Range(sheetName, `A2:${SHEET_LAST_COL}`),
   });
   const raw = (res.data.values ?? []) as string[][];
   return raw.map((values, i) => ({ rowNumber: i + 2, values }));
@@ -124,9 +154,10 @@ export async function appendSheetRow(
   values: SheetRowValues,
 ): Promise<number | null> {
   const sheets = sheetsClient();
+  await ensureSheetColumnCount(spreadsheetId, sheetName, sheets);
   const res = await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: sheetA1Range(sheetName, "A:K"),
+    range: sheetA1Range(sheetName, `A:${SHEET_LAST_COL}`),
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [values] },
@@ -137,7 +168,7 @@ export async function appendSheetRow(
   return m && m[1] ? parseInt(m[1], 10) : null;
 }
 
-/** Overwrites a specific row (1-based) in columns A..K. */
+/** Overwrites a specific row (1-based) in columns A..AN. */
 export async function updateSheetRow(
   spreadsheetId: string,
   sheetName: string,
@@ -145,9 +176,10 @@ export async function updateSheetRow(
   values: SheetRowValues,
 ): Promise<void> {
   const sheets = sheetsClient();
+  await ensureSheetColumnCount(spreadsheetId, sheetName, sheets);
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: sheetA1Range(sheetName, `A${rowNumber}:K${rowNumber}`),
+    range: sheetA1Range(sheetName, `A${rowNumber}:${SHEET_LAST_COL}${rowNumber}`),
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [values] },
   });
@@ -160,16 +192,17 @@ export async function ensureSheetHeader(
   headers: string[],
 ): Promise<void> {
   const sheets = sheetsClient();
+  await ensureSheetColumnCount(spreadsheetId, sheetName, sheets);
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: sheetA1Range(sheetName, "A1:K1"),
+    range: sheetA1Range(sheetName, `A1:${SHEET_LAST_COL}1`),
   });
   const current = (existing.data.values?.[0] as string[] | undefined) ?? [];
   const upToDate = headers.every((h, i) => current[i] === h);
   if (upToDate) return;
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: sheetA1Range(sheetName, "A1:K1"),
+    range: sheetA1Range(sheetName, `A1:${SHEET_LAST_COL}1`),
     valueInputOption: "RAW",
     requestBody: { values: [headers] },
   });
@@ -195,11 +228,11 @@ export async function initSheetFormat(
   const sheets = sheetsClient();
 
   // Get sheet ID (needed for batchUpdate range objects)
+  const sheetId = await ensureSheetColumnCount(spreadsheetId, sheetName, sheets);
   const info = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetMeta = info.data.sheets?.find(
     (s) => s.properties?.title === sheetName,
   );
-  const sheetId = sheetMeta?.properties?.sheetId ?? 0;
 
   // Clear existing conditional format rules to avoid duplicates on re-run
   const existingRules =
@@ -214,8 +247,13 @@ export async function initSheetFormat(
     });
   }
 
-  // Column widths (pixels) — A through K
-  const colWidths = [110, 280, 130, 110, 130, 75, 195, 175, 135, 145, 50];
+  // Column widths (pixels) — A through AN
+  const colWidths = [
+    110, 280, 130, 110, 130, 75, 195, 175, 135, 145, 50,
+    110, 220, 120, 180, 90, 90, 180, 180, 180, 180, 240, 95,
+    160, 160, 150, 160, 150, 160, 150, 220, 160, 150, 220,
+    160, 150, 95, 95, 150, 150,
+  ];
 
   // Status label → background color (matches STATUS_HEX in @nacc/types)
   const statusColors: Array<{ label: string; bg: ReturnType<typeof rgb> }> = [
@@ -299,10 +337,39 @@ export async function initSheetFormat(
       },
     },
 
-    // ── Data rows A2:K — base style ───────────────────────────────────────
+    // ── Header — detailed mirror columns (L1:AN1) — dark gray ────────────
     {
       repeatCell: {
-        range: { sheetId, startRowIndex: 1, endRowIndex: 2000, startColumnIndex: 0, endColumnIndex: 11 },
+        range: {
+          sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 11,
+          endColumnIndex: SHEET_COLS,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: SYSTEM,
+            textFormat: { foregroundColor: WHITE, bold: true, fontSize: 9 },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields: "userEnteredFormat",
+      },
+    },
+
+    // ── Data rows A2:AN — base style ──────────────────────────────────────
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 1,
+          endRowIndex: 2000,
+          startColumnIndex: 0,
+          endColumnIndex: SHEET_COLS,
+        },
         cell: {
           userEnteredFormat: {
             textFormat: { fontSize: 10 },

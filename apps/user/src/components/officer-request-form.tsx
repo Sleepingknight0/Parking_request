@@ -43,6 +43,8 @@ import { createCommsRequest, uploadCommsAttachment } from "@/lib/comms-actions";
 import { setCommsDocumentProgress, setOfficerDocumentProgress } from "@/lib/document-progress-actions";
 import { DocumentProgressSelect } from "@nacc/ui";
 
+const SELECT_NONE = "__none__";
+
 type Scalars = {
   department_id: string;
   official_letter_no: string;
@@ -118,15 +120,15 @@ export function OfficerRequestForm({
 
   const { register, control, handleSubmit } = useForm<Scalars>({
     defaultValues: {
-      department_id: initial?.department_id ?? "",
+      department_id: initial?.department_id || SELECT_NONE,
       official_letter_no: initial?.official_letter_no ?? "",
       official_letter_date: initial?.official_letter_date ?? "",
       received_date: initial?.received_date ?? todayISO(),
       subject: initial?.subject ?? "",
-      receiving_officer_id: initial?.receiving_officer_id ?? "",
+      receiving_officer_id: initial?.receiving_officer_id || SELECT_NONE,
       contact_name: initial?.contact_name ?? "",
       contact_phone: initial?.contact_phone ?? "",
-      requested_location_id: initial?.requested_location_id ?? "",
+      requested_location_id: initial?.requested_location_id || SELECT_NONE,
       requested_location_text: initial?.requested_location_text ?? "",
       cars_count: initial?.cars_count ?? 1,
       purpose: initial?.purpose ?? "",
@@ -153,6 +155,11 @@ export function OfficerRequestForm({
   function assemble(values: Scalars): RequestFormInput {
     return {
       ...values,
+      department_id: values.department_id === SELECT_NONE ? "" : values.department_id,
+      receiving_officer_id:
+        values.receiving_officer_id === SELECT_NONE ? "" : values.receiving_officer_id,
+      requested_location_id:
+        values.requested_location_id === SELECT_NONE ? "" : values.requested_location_id,
       cars_count: Number(values.cars_count),
       date_pattern: pattern,
       priority: "normal",
@@ -262,6 +269,7 @@ export function OfficerRequestForm({
                     <SelectValue placeholder="เลือกสำนัก/หน่วยงาน" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
+                    <SelectItem value={SELECT_NONE}>เลือกสำนัก/หน่วยงาน</SelectItem>
                     {departments.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
                         {d.name_th}
@@ -296,29 +304,34 @@ export function OfficerRequestForm({
           <Field label={TH.entity.subject} className="sm:col-span-2">
             <Input {...register("subject")} />
           </Field>
-          {isComms ? (
-            <Field label={TH.entity.receivingOfficer} className="sm:col-span-2">
-              <Controller
-                control={control}
-                name="receiving_officer_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="เลือกเจ้าหน้าที่ที่รับเรื่อง" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {securityOfficers.map((officer) => (
-                        <SelectItem key={officer.id} value={officer.id}>
-                          {officer.name_th}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+          <Field label={TH.entity.receivingOfficer} className="sm:col-span-2">
+            <Controller
+              control={control}
+              name="receiving_officer_id"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกเจ้าหน้าที่ที่รับเรื่อง" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value={SELECT_NONE}>เลือกเจ้าหน้าที่ที่รับเรื่อง</SelectItem>
+                    {securityOfficers.map((officer) => (
+                      <SelectItem key={officer.id} value={officer.id}>
+                        {officer.name_th}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {securityOfficers.length === 0 ? (
+              <p className="mt-1.5 text-xs text-amber-700">
+                ยังไม่มีรายชื่อในระบบ — {TH.comms.receivingOfficerHint}
+              </p>
+            ) : (
               <p className="mt-1.5 text-xs text-muted-foreground">{TH.comms.receivingOfficerHint}</p>
-            </Field>
-          ) : null}
+            )}
+          </Field>
           {FEATURE_FLAGS.contactFields ? (
             <>
               <Field label={TH.entity.contactName}>
@@ -347,6 +360,7 @@ export function OfficerRequestForm({
                     <SelectValue placeholder="เลือกสถานที่" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={SELECT_NONE}>ไม่ระบุ</SelectItem>
                     {locations.map((l) => (
                       <SelectItem key={l.id} value={l.id}>
                         {l.name_th}

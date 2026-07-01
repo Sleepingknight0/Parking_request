@@ -5,7 +5,7 @@
  *   1. Reads all existing rows from the Google Sheet
  *   2. Matches each row to a Supabase record via official_letter_no
  *   3. Writes sheet_row back to Supabase
- *   4. Writes columns I (สถานะ), J (เลขที่คำขอ), K (_id) to the Sheet
+ *   4. Writes the full A-AN Supabase mirror row back to the Sheet
  *
  * Run this once after initial setup to link the historical rows to Supabase.
  * Safe to run multiple times — existing links are preserved.
@@ -15,7 +15,6 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@nacc/db/service";
-import { STATUS_LABELS_TH } from "@nacc/types";
 import {
   getAllSheetRows,
   updateSheetRow,
@@ -24,8 +23,9 @@ import {
   isSheetsConfigured,
   googleSheetsId,
 } from "@nacc/storage";
-import { LIVE_SHEET_HEADERS, thaiNumeralsToArabic } from "@nacc/utils";
+import { buildLiveSheetRow, LIVE_SHEET_HEADERS, thaiNumeralsToArabic } from "@nacc/utils";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { fetchLiveSheetRequest } from "@/lib/sheet-row";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
       const { data: match } = await supabase
         .from("parking_requests")
-        .select("id, request_no, status, sheet_row")
+        .select("id, sheet_row")
         .or(`official_letter_no.eq.${letterNo},official_letter_no.ilike.${letterNo}`)
         .maybeSingle();
 
@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
           .eq("id", match.id);
       }
 
-      const fullRow = [...values];
-      while (fullRow.length < 11) fullRow.push("");
-      fullRow[8] =
-        STATUS_LABELS_TH[match.status as keyof typeof STATUS_LABELS_TH] ?? match.status;
-      fullRow[9] = match.request_no;
-      fullRow[10] = match.id;
+      const mirror = await fetchLiveSheetRequest(supabase, match.id);
+      if (!mirror) {
+        results.skipped++;
+        continue;
+      }
+      const fullRow = buildLiveSheetRow(mirror);
 
       try {
         await updateSheetRow(spreadsheetId, sheetName, rowNumber, fullRow);

@@ -113,3 +113,45 @@ export interface DashboardCounts {
   carsToday: number;
   lettersToday: number;
 }
+
+export type SecurityOfficerOption = { id: string; name_th: string };
+
+export async function listActiveSecurityOfficers(
+  supabase: AnyClient,
+): Promise<SecurityOfficerOption[]> {
+  const { data, error } = await supabase
+    .from("security_officers")
+    .select("id,name_th")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name_th", { ascending: true });
+  if (error) {
+    console.error("[listActiveSecurityOfficers]", error.message);
+    return [];
+  }
+  return (data as SecurityOfficerOption[]) ?? [];
+}
+
+export async function getSecurityOfficerName(
+  supabase: AnyClient,
+  officerId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("security_officers")
+    .select("name_th")
+    .eq("id", officerId)
+    .maybeSingle();
+  if (error) return null;
+  return data?.name_th ?? null;
+}
+
+export async function receivingOfficerDbFields(
+  supabase: AnyClient,
+  officerId?: string | null,
+): Promise<{ receiving_officer_id: string | null; legacy_officer_name: string | null }> {
+  if (!officerId) {
+    return { receiving_officer_id: null, legacy_officer_name: null };
+  }
+  const legacy_officer_name = await getSecurityOfficerName(supabase, officerId);
+  return { receiving_officer_id: officerId, legacy_officer_name };
+}

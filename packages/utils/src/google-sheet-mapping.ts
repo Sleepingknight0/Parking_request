@@ -4,10 +4,14 @@
  * Supabase is the SOURCE OF TRUTH.  The Google Sheet is a live mirror that
  * officers can also edit directly (bidirectional sync).
  *
- * Column layout (A-K):
+ * Column layout (A-K keeps the legacy-compatible columns):
  *   A วันที่รับเรื่อง  B สำนัก      C เลขหนังสือ   D วันที่จอด   E เวลาที่จอด
  *   F จำนวนรถ           G อาคารที่จอด H เจ้าหน้าที่  I สถานะ       J เลขที่คำขอ
  *   K _id  (Supabase UUID — used for reverse sync; can be hidden by user)
+ *
+ * Columns L onward are a detailed Supabase mirror. They are intentionally
+ * appended, not inserted, so existing Google Apps Script setups that read
+ * column K for `_id` keep working.
  */
 
 // ─── Legacy import mapping (read-only, consumed by scripts/import-legacy.ts) ─
@@ -45,6 +49,35 @@ export const LIVE_SHEET_HEADERS = [
   "สถานะ",             // I (8)  — read-only from Sheets side
   "เลขที่คำขอ",        // J (9)  — read-only from Sheets side
   "_id",               // K (10) — system UUID; can be hidden
+  "วันที่หนังสือ",     // L (11)
+  "เรื่อง",             // M (12)
+  "รูปแบบวันที่",       // N (13)
+  "วันที่จอดทั้งหมด",   // O (14)
+  "เวลาเริ่ม",          // P (15)
+  "เวลาสิ้นสุด",        // Q (16)
+  "ทะเบียนรถทั้งหมด",   // R (17)
+  "หมายเหตุรถ",         // S (18)
+  "สถานที่จากรายการ",   // T (19)
+  "สถานที่ระบุเอง",     // U (20)
+  "เหตุผล/รายละเอียด", // V (21)
+  "ความสำคัญ",          // W (22)
+  "ผู้สร้างรายการ",     // X (23)
+  "ผู้รับผิดชอบ รปภ.",  // Y (24)
+  "วันที่มอบหมาย",      // Z (25)
+  "ผู้อนุมัติ",         // AA (26)
+  "วันที่อนุมัติ",      // AB (27)
+  "ผู้ยกเลิก",          // AC (28)
+  "วันที่ยกเลิก",       // AD (29)
+  "เหตุผลยกเลิก",       // AE (30)
+  "ผู้ส่งงาน",          // AF (31)
+  "วันที่เสร็จ",        // AG (32)
+  "หมายเหตุส่งงาน",     // AH (33)
+  "สื่อสารยืนยันงาน",   // AI (34)
+  "วันที่สื่อสารยืนยัน", // AJ (35)
+  "จำนวนไฟล์แนบ",       // AK (36)
+  "จำนวนรูปส่งงาน",     // AL (37)
+  "วันที่สร้าง",         // AM (38)
+  "วันที่แก้ไขล่าสุด",   // AN (39)
 ] as const;
 
 export type LiveSheetHeader = (typeof LIVE_SHEET_HEADERS)[number];
@@ -78,6 +111,35 @@ export interface LiveSheetRequest {
   legacy_officer_name: string | null;
   officer_display_name: string | null; // from created_by profile
   status_label_th: string;
+  official_letter_date?: string | null;
+  subject?: string | null;
+  date_pattern_label_th?: string | null;
+  all_dates?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  license_plates?: string | null;
+  vehicle_notes?: string | null;
+  location_choice_name?: string | null;
+  requested_location_text?: string | null;
+  purpose?: string | null;
+  priority_label_th?: string | null;
+  created_by_display_name?: string | null;
+  assigned_to_display_name?: string | null;
+  assigned_at?: string | null;
+  approved_by_display_name?: string | null;
+  approved_at?: string | null;
+  cancelled_by_display_name?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  completed_by_display_name?: string | null;
+  completed_at?: string | null;
+  completion_note?: string | null;
+  comms_verified_by_display_name?: string | null;
+  comms_verified_at?: string | null;
+  attachment_count?: number;
+  completion_photo_count?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 // Sheet time cells use dot style without "น." — import formatTimeThDot from "./date".
@@ -112,7 +174,7 @@ export function parseTimeRange(s: string | null | undefined): {
   };
 }
 
-/** Builds the A..K cell array to push to the Google Sheet. */
+/** Builds the full live-mirror cell array to push to the Google Sheet. */
 export function buildLiveSheetRow(r: LiveSheetRequest): (string | number | null)[] {
   const officerName = r.legacy_officer_name ?? r.officer_display_name ?? "";
   return [
@@ -127,13 +189,42 @@ export function buildLiveSheetRow(r: LiveSheetRequest): (string | number | null)
     r.status_label_th,               // I
     r.request_no,                    // J
     r.id,                            // K
+    r.official_letter_date ?? "",    // L
+    r.subject ?? "",                 // M
+    r.date_pattern_label_th ?? "",   // N
+    r.all_dates ?? "",               // O
+    r.start_time ?? "",              // P
+    r.end_time ?? "",                // Q
+    r.license_plates ?? "",          // R
+    r.vehicle_notes ?? "",           // S
+    r.location_choice_name ?? "",    // T
+    r.requested_location_text ?? "", // U
+    r.purpose ?? "",                 // V
+    r.priority_label_th ?? "",       // W
+    r.created_by_display_name ?? r.officer_display_name ?? "", // X
+    r.assigned_to_display_name ?? "", // Y
+    r.assigned_at ?? "",             // Z
+    r.approved_by_display_name ?? "", // AA
+    r.approved_at ?? "",             // AB
+    r.cancelled_by_display_name ?? "", // AC
+    r.cancelled_at ?? "",            // AD
+    r.cancellation_reason ?? "",     // AE
+    r.completed_by_display_name ?? "", // AF
+    r.completed_at ?? "",            // AG
+    r.completion_note ?? "",         // AH
+    r.comms_verified_by_display_name ?? "", // AI
+    r.comms_verified_at ?? "",       // AJ
+    r.attachment_count ?? 0,          // AK
+    r.completion_photo_count ?? 0,    // AL
+    r.created_at ?? "",              // AM
+    r.updated_at ?? "",              // AN
   ];
 }
 
 // ─── Sheets → Supabase change parser ─────────────────────────────────────────
 
 export interface SheetCellChange {
-  /** 1-letter column (A-K) */
+  /** 1-letter column. Only legacy-compatible editable columns are parsed. */
   column: string;
   value: string;
 }
