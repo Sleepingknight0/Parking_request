@@ -219,7 +219,14 @@ async function main() {
     requestBody: { values: [[...LIVE_SHEET_HEADERS]] },
   });
 
-  // 5. Fetch ALL requests from Supabase
+  // 5. Clear old data rows before writing the new mirror. This must happen
+  // even when Supabase has zero rows, otherwise stale Sheet rows remain.
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: GS_ID,
+    range: `${GS_TAB}!A2:AN2000`,
+  });
+
+  // 6. Fetch ALL requests from Supabase
   console.log("📥 กำลังดึงข้อมูลจาก Supabase...");
   const { data: requests, error } = await supabase
     .from("parking_requests")
@@ -250,12 +257,6 @@ async function main() {
   if (!requests?.length) { console.log("⚠️  ไม่มีข้อมูลใน Supabase"); return; }
 
   console.log(`   พบ ${requests.length} รายการ\n`);
-
-  // 6. Clear old data rows
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: GS_ID,
-    range: `${GS_TAB}!A2:AN2000`,
-  });
 
   // 7. Build all rows
   const rows: (string | number | null)[][] = requests.map((r: any) => {

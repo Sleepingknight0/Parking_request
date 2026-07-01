@@ -257,3 +257,24 @@ Verification:
 - `pnpm --filter @nacc/admin build` passed
 - `pnpm --filter @nacc/user build` passed
 - `pnpm push:sheet` passed and wrote 1 row to the live Google Sheet
+
+## 2026-07-01 — Codex: Fix Google Sheet data-row formatting
+
+Root cause:
+
+- Live Sheet data rows inherited header formatting (navy/system background, white bold text).
+- The formatter only set data-row font size, wrap, and borders; it did not explicitly reset `backgroundColor`, text foreground, or `bold`.
+- Full `push:sheet` also returned before clearing old rows when Supabase had zero requests, which could leave stale Sheet rows after Supabase was empty.
+
+Fix:
+
+- Updated `packages/storage/src/google-sheets.ts` and `scripts/push-to-sheet.ts` so data rows `A2:AN` are explicitly white background, black/plain text, wrapped, and bordered.
+- Added runtime row formatting after `appendSheetRow` and `updateSheetRow` so new rows cannot inherit header styling from Google Sheets.
+- Moved `push:sheet` stale-row clearing before the empty-Supabase early return.
+- Re-ran `pnpm push:sheet`; Supabase currently has zero requests, so Sheet data rows were cleared and only the header remains.
+
+Verification:
+
+- `pnpm typecheck` passed
+- `pnpm lint` passed
+- Read live Google Sheet `A1:K2`; only the header row remains, confirming stale data rows were cleared.
