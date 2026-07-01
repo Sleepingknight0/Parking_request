@@ -14,12 +14,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@nacc/db/service";
 import {
   getAllSheetRows,
+  updateSheetRow,
+  ensureSheetHeader,
   resolveSheetTabName,
   isSheetsConfigured,
   googleSheetsId,
 } from "@nacc/storage";
-import { thaiNumeralsToArabic, parseTimeRange } from "@nacc/utils";
+import { buildLiveSheetRow, LIVE_SHEET_HEADERS, thaiNumeralsToArabic, parseTimeRange } from "@nacc/utils";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { fetchLiveSheetRequest } from "@/lib/sheet-row";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Vercel: allow up to 60 s for large sheets
@@ -55,13 +58,25 @@ async function handlePoll(req: NextRequest) {
     const spreadsheetId = googleSheetsId()!;
     const sheetName     = await resolveSheetTabName(spreadsheetId);
 
+    await ensureSheetHeader(spreadsheetId, sheetName, [...LIVE_SHEET_HEADERS]);
     const sheetRows = await getAllSheetRows(spreadsheetId, sheetName);
 
-    const stats = { checked: 0, updated: 0, skipped: 0, errors: [] as string[] };
+    const stats = { checked: 0, created: 0, updated: 0, skipped: 0, errors: [] as string[] };
 
     for (const { rowNumber, values } of sheetRows) {
     const id = values[COL_ID]?.trim();
-    if (!id) { stats.skipped++; continue; }  // No UUID yet → skip
+    if (!id) {
+      const created = await createRequestFromSheetRow({
+        supabase,
+        spreadsheetId,
+        sheetName,
+        rowNumber,
+        values,
+      });
+      if (created === "created") stats.created++;
+      else stats.skipped++;
+      continue;
+    }
 
     stats.checked++;
 
@@ -166,6 +181,11 @@ async function handlePoll(req: NextRequest) {
           status: "success",
           message: `row ${rowNumber}: updated ${[...Object.keys(changed), dateChanged ? "date" : "", timeChanged ? "time" : ""].filter(Boolean).join(", ")}`,
         });
+
+        const mirror = await fetchLiveSheetRequest(supabase, id);
+        if (mirror) {
+          await updateSheetRow(spreadsheetId, sheetName, rowNumber, buildLiveSheetRow(mirror));
+        }
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -190,4 +210,113 @@ function isoFromTh(s: string): string {
     return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
   }
   return "";
+}
+
+async function createRequestFromSheetRow({
+  supabase,
+  spreadsheetId,
+  sheetName,
+  rowNumber,
+  values,
+}: {
+  supabase: ReturnType<typeof createServiceClient>;
+  spreadsheetId: string;
+  sheetName: string;
+  rowNumber: number;
+  values: string[];
+}): Promise<"created" | "skipped"> {
+  const shReceivedDate = isoFromTh(thaiNumeralsToArabic(values[0] ?? "").trim()) || null;
+  const shDept = thaiNumeralsToArabic(values[COL_DEPT] ?? "").trim();
+  const shLetterNo = thaiNumeralsToArabic(values[COL_LETTER_NO] ?? "").trim();
+  const shDate = isoFromTh(thaiNumeralsToArabic(values[COL_DATE] ?? "").trim());
+  const { start, end } = parseTimeRange(thaiNumeralsToArabic(values[COL_TIME] ?? "").trim());
+  const shCars = parseInt(thaiNumeralsToArabic(values[COL_CARS] ?? "").trim(), 10) || 1;
+  const shLocation = (values[COL_LOCATION] ?? "").trim();
+  const shOfficer = (values[COL_OFFICER] ?? "").trim();
+
+  if (!shLetterNo || shLetterNo === "-") return "skipped";
+
+  const { data: existing } = await supabase
+    .from("parking_requests")
+    .select("id")
+    .eq("official_letter_no", shLetterNo)
+    .maybeSingle();
+  if (existing?.id) {
+    await supabase
+      .from("parking_requests")
+      .update({ sheet_row: rowNumber, sheet_synced_at: new Date().toISOString() })
+      .eq("id", existing.id);
+    const mirror = await fetchLiveSheetRequest(supabase, existing.id);
+    if (mirror) await updateSheetRow(spreadsheetId, sheetName, rowNumber, buildLiveSheetRow(mirror));
+    return "created";
+  }
+
+  let departmentId: string | null = null;
+  if (shDept) {
+    const { data: dept } = await supabase
+      .from("departments")
+      .select("id")
+      .ilike("name_th", shDept)
+      .maybeSingle();
+    departmentId = dept?.id ?? null;
+  }
+
+  const now = new Date().toISOString();
+  const { data: inserted, error } = await supabase
+    .from("parking_requests")
+    .insert({
+      department_id: departmentId,
+      official_letter_no: shLetterNo,
+      received_date: shReceivedDate,
+      requested_location_text: shLocation || null,
+      legacy_officer_name: shOfficer || null,
+      date_pattern: "single",
+      cars_count: shCars,
+      priority: "normal",
+      status: "submitted",
+      legacy_source: "google-sheet-live",
+      legacy_row_number: rowNumber,
+      legacy_imported_at: now,
+      sheet_row: rowNumber,
+      sheet_synced_at: now,
+      metadata: { source: "google_sheet_poll", rowNumber, original: values },
+    })
+    .select("id")
+    .single();
+
+  if (error || !inserted) {
+    await supabase.from("sheet_sync_logs").insert({
+      entity_type: "parking_requests",
+      sync_direction: "from_sheet_poll",
+      status: "error",
+      message: `row ${rowNumber}: create failed: ${error?.message ?? "unknown"}`,
+      payload: { rowNumber, values },
+    });
+    return "skipped";
+  }
+
+  if (shDate) {
+    await supabase.from("request_dates").insert({
+      request_id: inserted.id,
+      request_date: shDate,
+      start_time: start,
+      end_time: end,
+    });
+  }
+
+  await supabase.from("sheet_sync_logs").insert({
+    entity_type: "parking_requests",
+    entity_id: inserted.id as any,
+    sync_direction: "from_sheet_poll",
+    status: "success",
+    message: `row ${rowNumber}: created from sheet`,
+    payload: { rowNumber },
+  });
+
+  const mirror = await fetchLiveSheetRequest(supabase, inserted.id);
+  if (mirror) {
+    await updateSheetRow(spreadsheetId, sheetName, rowNumber, buildLiveSheetRow(mirror));
+  }
+
+  return "created";
 }

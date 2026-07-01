@@ -1,8 +1,9 @@
 /**
  * sheet-sync.ts — server-side helper called from server actions.
  *
- * Fire-and-forget: failures are logged but never bubble up to the user.
- * Call syncRequestToSheet(id) after any mutation that should be mirrored.
+ * Fail-soft: failures are logged but never bubble up to the user.
+ * Await syncRequestToSheet(id) after any mutation that should be mirrored so
+ * server actions do not finish before the Sheet push starts.
  */
 import "server-only";
 import { createServiceClient } from "@nacc/db/service";
@@ -68,7 +69,7 @@ export async function syncRequestToSheet(requestId: string): Promise<void> {
  * `sheet_row` of every record that sat below it (those rows shift up by one
  * when the physical row is deleted).
  *
- * Fire-and-forget: failures are logged but never bubble up to the caller.
+ * Fail-soft: failures are logged but never bubble up to the caller.
  * Safe to call with an id that was never synced (no-op if the row is absent).
  */
 export async function removeRequestFromSheet(requestId: string): Promise<void> {

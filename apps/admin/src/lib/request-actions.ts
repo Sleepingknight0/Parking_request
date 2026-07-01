@@ -114,7 +114,7 @@ export async function createRequest(
   await logActivity("request.create", req.id, profile.id, { submit });
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(req.id);
+  await syncRequestToSheet(req.id);
   return { ok: true, id: req.id };
 }
 
@@ -177,7 +177,7 @@ export async function updateRequest(
   await logActivity("request.update", id, profile.id);
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -193,7 +193,7 @@ export async function submitRequest(id: string): Promise<ActionResult> {
   await logActivity("request.submit", id, profile.id);
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -210,7 +210,7 @@ export async function markUnderReview(id: string): Promise<ActionResult> {
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -226,7 +226,7 @@ export async function approveRequest(id: string): Promise<ActionResult> {
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -246,7 +246,7 @@ export async function rejectRequest(id: string, reason?: string): Promise<Action
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -300,7 +300,7 @@ export async function assignRequest(
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -319,7 +319,7 @@ export async function changeStatus(
   await logActivity("request.status_change", id, profile.id, { to: toStatus });
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -355,7 +355,7 @@ export async function completeRequest(
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -380,7 +380,7 @@ export async function cancelRequest(
   revalidatePath(`/requests/${id}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(id);
+  await syncRequestToSheet(id);
   return { ok: true, id };
 }
 
@@ -429,6 +429,7 @@ export async function uploadAttachment(
 
   await logActivity("attachment.upload", requestId, profile.id, { fileType });
   revalidatePath(`/requests/${requestId}`);
+  await syncRequestToSheet(requestId);
   return { ok: true, id: requestId };
 }
 
@@ -473,7 +474,7 @@ export async function setAdminDocumentProgress(
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  void syncRequestToSheet(requestId);
+  await syncRequestToSheet(requestId);
   return { ok: true, id: requestId };
 }
 
@@ -485,6 +486,6 @@ export async function deleteRequest(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message };
   await logActivity("request.delete", id, profile.id);
   revalidatePath("/requests");
-  void removeRequestFromSheet(id);
+  await removeRequestFromSheet(id);
   return { ok: true };
 }

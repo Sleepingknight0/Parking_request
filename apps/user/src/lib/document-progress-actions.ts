@@ -9,6 +9,7 @@ import {
 import { walkToDocumentProgress } from "@nacc/utils";
 import { requireAppMode } from "./user-guards";
 import type { ActionResult } from "./request-actions";
+import { requestSheetSync } from "./sheet-sync";
 
 function revalidateDocumentProgressPaths(id: string, modes: ("officer" | "comms" | "security")[]) {
   if (modes.includes("officer")) {
@@ -87,6 +88,7 @@ async function applyDocumentProgress(
   });
 
   revalidateDocumentProgressPaths(requestId, modes);
+  await requestSheetSync(requestId);
   return { ok: true, id: requestId };
 }
 

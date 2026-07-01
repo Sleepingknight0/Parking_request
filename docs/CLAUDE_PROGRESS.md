@@ -224,3 +224,36 @@ Follow-up debug:
 - Re-ran `pnpm push:sheet`; it succeeded and updated the live Sheet header to A-AN.
 - Confirmed linked Supabase project `pgwpmmmsdobwvxcwlleu` currently has `parking_requests_count = 0`, so there are no request rows to push yet.
 - Re-verified `pnpm typecheck` and `pnpm lint` pass.
+
+## 2026-07-01 — Codex: Fix live Sheet/Supabase sync gaps
+
+Root cause:
+
+- Admin app actions pushed to Google Sheets, but User app actions did not call any sync path.
+- The optional Supabase Database Webhook was not installed, so user-created requests stayed in Supabase only.
+- `/api/sync/poll` skipped Google Sheet rows without `_id`, so brand-new Sheet rows could not create Supabase requests.
+- A later add-flow bug remained because several web actions used fire-and-forget sync calls (`void ...Sync(...)`). In Next server actions this can finish the request before the Sheet push actually runs, so deletes could appear in Sheet while newly added/edited requests were unreliable.
+
+Fix:
+
+- Added `apps/user/src/lib/sheet-sync.ts` to call Admin `/api/sync/push` after user-side create/update/status/photo mutations.
+- Wired user sync calls into officer, comms, security, document-progress, and completion-photo actions.
+- Added `SYNC_WEBHOOK_SECRET` to `apps/user/.env.example`; local `apps/user/.env.local` was updated to match admin for testing.
+- Enhanced `/api/sync/poll`:
+  - linked rows with `_id` update Supabase from B-H
+  - unlinked rows without `_id` create a Supabase request when `เลขหนังสือ` exists
+  - canonical A-AN row is written back after create/update
+- Changed Admin and User request mutations to `await` Sheet sync instead of starting it in the background.
+- Added missing Admin attachment upload sync so file counts/details in Sheet refresh after admin uploads.
+- Restarted local admin/user dev servers so env and sync code are loaded.
+- Ran `pnpm push:sheet`; it wrote 1 Supabase request row to the live Google Sheet.
+- Called local `/api/sync/poll`; response was `ok: true`, `checked: 1`, `updated: 1`, `errors: []`.
+- Called local `/api/sync/push` for the latest request after restart; response was HTTP 200 with `{"ok":true,"sheet_row":2}`.
+
+Verification:
+
+- `pnpm typecheck` passed
+- `pnpm lint` passed
+- `pnpm --filter @nacc/admin build` passed
+- `pnpm --filter @nacc/user build` passed
+- `pnpm push:sheet` passed and wrote 1 row to the live Google Sheet

@@ -27,6 +27,7 @@ import {
   updateCommsOperationalSettings,
   type CommsOperationalSettings,
 } from "./comms-operational-settings";
+import { requestSheetSync } from "./sheet-sync";
 
 const COMMS_FILE_TYPES: FileType[] = ["official_letter", "general_attachment"];
 
@@ -88,6 +89,7 @@ export async function commsMarkUnderReview(id: string): Promise<ActionResult> {
 
   await logCommsActivity("request.status_change", id, profile.id, { to: "under_review" });
   revalidateCommsPaths(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -115,6 +117,7 @@ export async function commsApproveRequest(id: string): Promise<ActionResult> {
 
   await logCommsActivity("request.status_change", id, profile.id, { to: "approved" });
   revalidateCommsPaths(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -143,6 +146,7 @@ export async function commsRejectRequest(id: string, reason?: string): Promise<A
 
   await logCommsActivity("request.status_change", id, profile.id, { to: "rejected", reason });
   revalidateCommsPaths(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -173,6 +177,7 @@ export async function commsVerifyCompletion(id: string): Promise<ActionResult> {
 
   await logCommsActivity("request.comms_verify", id, profile.id);
   revalidateCommsPaths(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -253,6 +258,7 @@ export async function createCommsRequest(
     submit,
   });
   revalidateCommsPaths(req.id);
+  await requestSheetSync(req.id);
   return { ok: true, id: req.id };
 }
 
@@ -302,6 +308,7 @@ export async function uploadCommsAttachment(
     await tryCommsAutoApproveRequest(requestId);
     revalidateCommsPaths(requestId);
   }
+  await requestSheetSync(requestId);
   return { ok: true, id: requestId };
 }
 

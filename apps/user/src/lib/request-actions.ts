@@ -21,6 +21,7 @@ import { tryCommsAutoApproveRequest } from "./comms-operational-settings";
 import { assertSupabaseStorageReady } from "./storage-guards";
 import { getAppMode, requireAppMode } from "./user-guards";
 import { getUserAppDb } from "./user-db";
+import { requestSheetSync } from "./sheet-sync";
 
 export interface ActionResult {
   ok: boolean;
@@ -129,6 +130,7 @@ export async function createOfficerRequest(
     await tryCommsAutoApproveRequest(req.id);
   }
   revalidateUserRequest(req.id);
+  await requestSheetSync(req.id);
   return { ok: true, id: req.id };
 }
 
@@ -205,6 +207,7 @@ export async function updateOfficerRequest(
     submit,
   });
   revalidateUserRequest(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -229,6 +232,7 @@ export async function cancelOfficerRequest(
   if (error) return { ok: false, error: error.message };
   await logActivity("request.cancel", id, profile.id, { app: "user", reason });
   revalidateUserRequest(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -270,6 +274,7 @@ export async function acceptJob(id: string, signMethod?: SignOutputMethod): Prom
     ...(signMethod ? { sign_output_method: signMethod } : {}),
   });
   revalidateUserRequest(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -308,6 +313,7 @@ export async function startJob(id: string): Promise<ActionResult> {
   if (!data) return { ok: false, error: "เริ่มงานได้เฉพาะงานที่รับแล้วเท่านั้น" };
   await logActivity("request.status_change", id, profile.id, { app: "user", to: "in_progress" });
   revalidateUserRequest(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -337,6 +343,7 @@ export async function cancelJob(id: string, reason: string): Promise<ActionResul
   if (!data) return { ok: false, error: "ยกเลิกได้เฉพาะงานที่คุณรับผิดชอบอยู่เท่านั้น" };
   await logActivity("request.cancel", id, profile.id, { app: "user", reason });
   revalidateUserRequest(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
 
@@ -401,5 +408,6 @@ export async function uploadUserAttachment(
     await tryCommsAutoApproveRequest(requestId);
   }
   revalidateUserRequest(requestId);
+  await requestSheetSync(requestId);
   return { ok: true, id: requestId };
 }

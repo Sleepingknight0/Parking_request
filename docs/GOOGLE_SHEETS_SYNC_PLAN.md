@@ -83,6 +83,13 @@ GOOGLE_DRIVE_CLIENT_EMAIL=nacc-parking-streamlit@...
 GOOGLE_DRIVE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
 ```
 
+The User app must also have the same sync secret so officer/comms/security actions can notify the Admin sync endpoint:
+
+```env
+NEXT_PUBLIC_ADMIN_APP_URL=https://YOUR-ADMIN-APP.vercel.app
+SYNC_WEBHOOK_SECRET=change-me-before-deploy
+```
+
 ### 4. Apply the database migration
 
 Paste in Supabase → SQL Editor and run:
@@ -204,9 +211,14 @@ Admin action (create/update/status change)
        └─ appendSheetRow() if new    [packages/storage/google-sheets.ts]
           OR updateSheetRow() if sheet_row already set
        └─ write sheet_row + sheet_synced_at back to DB
+
+User action (officer/comms/security create/update/status/photo)
+  └─ requestSheetSync(id)            [apps/user/src/lib/sheet-sync.ts]
+       └─ POST /api/sync/push on the Admin app
+       └─ Admin app performs the same append/update flow above
 ```
 
-### Sheet → Supabase (via Apps Script onEdit)
+### Sheet → Supabase (via Apps Script onEdit or poll)
 
 ```
 Staff edits cell B-H
@@ -215,6 +227,12 @@ Staff edits cell B-H
             └─ parseSheetChange()    [packages/utils/google-sheet-mapping.ts]
             └─ update parking_requests or request_dates in Supabase
             └─ log to sheet_sync_logs
+
+No Apps Script / scheduled sync
+  └─ GET/POST /api/sync/poll         [apps/admin/src/app/api/sync/poll/route.ts]
+       └─ linked row with _id: update Supabase fields B-H
+       └─ unlinked row without _id: create a Supabase request from the Sheet row
+       └─ write the canonical A-AN row back to Sheet
 ```
 
 ### Optional: Supabase Database Webhook (for user-app mutations)

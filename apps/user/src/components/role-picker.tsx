@@ -3,19 +3,14 @@
 import { ClipboardList, Megaphone, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@nacc/ui";
 import { ROLE_LABELS_TH, TH } from "@nacc/types";
-import {
-  enterCommsMode,
-  enterOfficerMode,
-  enterSecurityMode,
-  enterSuperAdminMode,
-} from "@/lib/mode-actions";
+
+const ENTER_MODE_ACTION = "/api/auth/enter-mode";
 
 const modes = [
   {
     key: "officer" as const,
     title: "เจ้าหน้าที่",
     description: "บันทึกหนังสือและติดตามคำขอร่วมกัน",
-    action: enterOfficerMode,
     icon: ClipboardList,
     accent: "bg-blue-50 text-blue-700",
   },
@@ -23,7 +18,6 @@ const modes = [
     key: "comms" as const,
     title: "พนักงานสื่อสาร",
     description: "ดูหนังสือและติดตามสถานะงาน",
-    action: enterCommsMode,
     icon: Megaphone,
     accent: "bg-violet-50 text-violet-700",
   },
@@ -31,7 +25,6 @@ const modes = [
     key: "security" as const,
     title: "เจ้าหน้าที่ รปภ.",
     description: "รับงานและส่งงานอย่างรวดเร็ว",
-    action: enterSecurityMode,
     icon: ShieldCheck,
     accent: "bg-emerald-50 text-emerald-700",
   },
@@ -39,7 +32,6 @@ const modes = [
     key: "super_admin" as const,
     title: ROLE_LABELS_TH.super_admin,
     description: "แดชบอร์ด รายงาน และจัดการระบบ (ต้องล็อกอิน)",
-    action: enterSuperAdminMode,
     icon: Settings2,
     accent: "bg-amber-50 text-amber-800",
   },
@@ -58,7 +50,8 @@ export function RolePicker({ error }: { error?: string }) {
         {modes.map((mode) => {
           const Icon = mode.icon;
           return (
-            <form key={mode.key} action={mode.action} className="min-w-0">
+            <form key={mode.key} action={ENTER_MODE_ACTION} method="POST" className="min-w-0">
+              <input type="hidden" name="mode" value={mode.key} />
               <button
                 type="submit"
                 className={cn(

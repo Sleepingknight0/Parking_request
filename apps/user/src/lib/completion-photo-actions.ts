@@ -14,6 +14,7 @@ import type { ActionResult } from "./request-actions";
 import { requireAppMode } from "./user-guards";
 import { getUserAppDb } from "./user-db";
 import { tryCommsAutoVerifyRequest } from "./comms-operational-settings";
+import { requestSheetSync } from "./sheet-sync";
 
 function revalidateUserRequest(id?: string) {
   revalidatePath("/security/dashboard");
@@ -143,6 +144,7 @@ export async function uploadCompletionPhoto(
     storageProvider: "supabase",
   });
   revalidateUserRequest(requestId);
+  await requestSheetSync(requestId);
   return { ok: true, id: requestId };
 }
 
@@ -197,5 +199,6 @@ export async function completeJobWithPhotos(
   await logActivity("request.complete", id, profile.id, { app: "user" });
   await tryCommsAutoVerifyRequest(id);
   revalidateUserRequest(id);
+  await requestSheetSync(id);
   return { ok: true, id };
 }
