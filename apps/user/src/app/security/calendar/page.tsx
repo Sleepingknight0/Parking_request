@@ -29,7 +29,7 @@ export default async function SecurityCalendarPage() {
         <SecurityLegend compact />
       </div>
 
-      <SecurityParkingCalendar events={calendarEvents} todayIso={today} />
+      <SecurityParkingCalendar events={calendarEvents} todayIso={today} includePastEvents maxMobileDays={90} />
     </>
   );
 }

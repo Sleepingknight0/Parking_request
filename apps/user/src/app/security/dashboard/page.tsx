@@ -104,6 +104,7 @@ export default async function SecurityDashboardPage() {
           todayIso={today}
           maxMobileDays={DASHBOARD_URGENT_CALENDAR_DAYS}
           showDesktop={false}
+          groupByRequest
           emptyMessage={`ไม่มีงานจอดในช่วง ${DASHBOARD_URGENT_CALENDAR_DAYS} วันข้างหน้า`}
         />
       </section>

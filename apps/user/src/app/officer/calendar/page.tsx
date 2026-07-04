@@ -31,6 +31,8 @@ export default async function OfficerCalendarPage() {
         events={events}
         todayIso={today}
         detailPathPrefix="/officer/requests"
+        includePastEvents
+        maxMobileDays={90}
       />
     </>
   );

@@ -25,9 +25,8 @@ import {
   EMPTY_REQUEST_FILTERS,
   applyRequestListFilters,
   extractDepartmentsFromRows,
+  formatRequestListScheduleLine,
   formatThaiDate,
-  formatTimeRange,
-  pickRequestDateSlot,
   toCsv,
   downloadFile,
   type RequestListFilters,
@@ -154,7 +153,9 @@ export function AdminRequestsPanel({
         ) : (
           <ul className="space-y-2">
             {visibleRows.map((request) => {
-              const slot = pickRequestDateSlot(request, filters.date);
+              const scheduleLine = formatRequestListScheduleLine(request.request_dates, {
+                filterDate: filters.date,
+              });
               const actionable = isAdminActionable(request);
               const adminQueue = getAdminQueue(request);
               return (
@@ -187,10 +188,7 @@ export function AdminRequestsPanel({
                           "-"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {slot
-                          ? `${formatThaiDate(slot.request_date)} · ${formatTimeRange(slot.start_time, slot.end_time)}`
-                          : "ยังไม่ระบุวันที่จอด"}{" "}
-                        · {request.cars_count} คัน
+                        {scheduleLine} · {request.cars_count} คัน
                         {request.assigned_to_profile?.display_name
                           ? ` · ${request.assigned_to_profile.display_name}`
                           : ""}

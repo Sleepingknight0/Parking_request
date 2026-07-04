@@ -20,12 +20,11 @@ import {
   STATUS_LABELS_TH,
   type RequestStatus,
 } from "@nacc/types";
-import { formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatRequestListScheduleLine } from "@nacc/utils";
 import {
   EMPTY_REQUEST_FILTERS,
   applyRequestListFilters,
   extractDepartmentsFromRows,
-  pickRequestDateSlot,
   type RequestListFilters,
 } from "@/lib/request-list-filters";
 import {
@@ -120,7 +119,9 @@ export function CommsRequestsList({
           ) : (
             <ul className="space-y-2">
               {filtered.map((request) => {
-                const slot = pickRequestDateSlot(request, filters.date);
+                const scheduleLine = formatRequestListScheduleLine(request.request_dates, {
+                  filterDate: filters.date,
+                });
                 const actionable = isCommsActionable(request);
                 const commsQueue = getCommsQueue(request);
                 return (
@@ -152,10 +153,7 @@ export function CommsRequestsList({
                           {request.requested_location?.name_th ?? request.requested_location_text ?? "-"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {slot
-                            ? `${formatThaiDate(slot.request_date)} · ${formatTimeRange(slot.start_time, slot.end_time)}`
-                            : "ยังไม่ระบุวันที่จอด"}{" "}
-                          · {request.cars_count} คัน
+                          {scheduleLine} · {request.cars_count} คัน
                         </p>
                         {FEATURE_FLAGS.officialLetterIndicators && request.officialLetterCount === 0 ? (
                           <p className="text-xs font-medium text-amber-700">{TH.comms.missingLetter}</p>

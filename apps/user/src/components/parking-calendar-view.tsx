@@ -11,6 +11,9 @@ export function ParkingCalendarView({
   maxMobileDays = 14,
   showDesktop = true,
   emptyMessage,
+  groupByRequest = true,
+  includePastEvents = false,
+  maxPastDays = 90,
 }: {
   events: CalendarEvent[];
   todayIso: string;
@@ -18,6 +21,9 @@ export function ParkingCalendarView({
   maxMobileDays?: number;
   showDesktop?: boolean;
   emptyMessage?: string;
+  groupByRequest?: boolean;
+  includePastEvents?: boolean;
+  maxPastDays?: number;
 }) {
   const router = useRouter();
   const toDetail = (requestId: string) => `${detailPathPrefix}/${requestId}`;
@@ -30,6 +36,9 @@ export function ParkingCalendarView({
         maxDays={maxMobileDays}
         emptyMessage={emptyMessage}
         hideOnDesktop={showDesktop}
+        groupByRequest={groupByRequest}
+        includePastEvents={includePastEvents}
+        maxPastDays={maxPastDays}
         onSelectRequest={(id) => router.push(toDetail(id))}
       />
       {showDesktop ? (

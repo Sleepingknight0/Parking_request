@@ -4,12 +4,11 @@ import * as React from "react";
 import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, StatusBadge } from "@nacc/ui";
 import { TH, type ParkingRequestListItem, type RequestStatus } from "@nacc/types";
-import { formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatRequestListScheduleLine } from "@nacc/utils";
 import {
   EMPTY_REQUEST_FILTERS,
   applyRequestListFilters,
   extractDepartmentsFromRows,
-  pickRequestDateSlot,
   type RequestListFilters,
 } from "@/lib/request-list-filters";
 import { OfficerRequestDetailSheet } from "./officer-request-detail-sheet";
@@ -48,7 +47,9 @@ export function OfficerRequestsList({ rows }: { rows: ParkingRequestListItem[] }
           ) : (
             <ul className="space-y-2">
               {filtered.map((request) => {
-                const slot = pickRequestDateSlot(request, filters.date);
+                const scheduleLine = formatRequestListScheduleLine(request.request_dates, {
+                  filterDate: filters.date,
+                });
                 return (
                   <li key={request.id}>
                     <button
@@ -70,10 +71,7 @@ export function OfficerRequestsList({ rows }: { rows: ParkingRequestListItem[] }
                           {request.requested_location?.name_th ?? request.requested_location_text ?? "-"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {slot
-                            ? `${formatThaiDate(slot.request_date)} · ${formatTimeRange(slot.start_time, slot.end_time)}`
-                            : "ยังไม่ระบุวันที่จอด"}{" "}
-                          · {request.cars_count} คัน
+                          {scheduleLine} · {request.cars_count} คัน
                         </p>
                       </div>
                       <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />

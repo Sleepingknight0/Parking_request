@@ -99,6 +99,20 @@
   border: none;
   font-size: 0.75rem;
 }
+.fc .fc-daygrid-event {
+  border-radius: 0;
+}
+.fc .fc-daygrid-block-event .fc-event-start {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+}
+.fc .fc-daygrid-block-event .fc-event-end {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+}
+.fc .fc-daygrid-block-event:not(.fc-event-start):not(.fc-event-end) {
+  border-radius: 0;
+}
 
 /* ─── Print / official-document styles ─────────────────────────────────────── */
 .official-doc,

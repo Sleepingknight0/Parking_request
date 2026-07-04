@@ -25,3 +25,4 @@ export * from "./components/completion-photo-gallery";
 export * from "./components/attachment-preview-gallery";
 export * from "./components/document-progress-editor";
 export * from "./components/request-search-toolbar";
+export * from "./components/request-parking-dates-display";

@@ -2,6 +2,7 @@ import { createServiceClient } from "@nacc/db/service";
 import { FEATURE_FLAGS } from "@nacc/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSharedActorProfile } from "./user-guards";
+import { requestSheetSync } from "./sheet-sync";
 import type { UserAppMode } from "./user-mode";
 
 export type CommsOperationalSettings = {
@@ -139,7 +140,13 @@ export async function runCommsAutoApprovals(actorId: string): Promise<number> {
 
   let count = 0;
   for (const row of pending ?? []) {
-    if (await autoApproveRequest(svc, row.id, actorId)) count += 1;
+    if (await autoApproveRequest(svc, row.id, actorId)) {
+      // Mirror the auto-approval to the live Google Sheet. The per-request
+      // helpers sync via their callers, but this bulk path had no sync of its
+      // own, so auto-approved rows never reached the Sheet.
+      await requestSheetSync(row.id);
+      count += 1;
+    }
   }
   return count;
 }
@@ -158,7 +165,12 @@ export async function runCommsAutoVerifications(actorId: string): Promise<number
 
   let count = 0;
   for (const row of rows ?? []) {
-    if (await autoVerifyRequest(svc, row.id, actorId)) count += 1;
+    if (await autoVerifyRequest(svc, row.id, actorId)) {
+      // Mirror the auto-verification to the live Google Sheet (same reason as
+      // runCommsAutoApprovals — this bulk path previously skipped the Sheet).
+      await requestSheetSync(row.id);
+      count += 1;
+    }
   }
   return count;
 }

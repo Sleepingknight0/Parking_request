@@ -10,13 +10,12 @@ import {
   StatusBadge,
 } from "@nacc/ui";
 import { FEATURE_FLAGS, type ParkingRequestListItem, type RequestStatus } from "@nacc/types";
-import { formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatRequestListScheduleLine } from "@nacc/utils";
 import { CommsVerificationBadge } from "./comms-verification-badge";
 import {
   EMPTY_REQUEST_FILTERS,
   applyRequestListFilters,
   extractDepartmentsFromRows,
-  pickRequestDateSlot,
   type RequestListFilters,
 } from "@/lib/request-list-filters";
 import { RequestSearchToolbar } from "./request-search-toolbar";
@@ -55,7 +54,9 @@ export function DashboardRequestPanel({
   const visibleRows = filteredRows.slice(0, maxRows);
 
   function renderRow(request: DashboardRequestRow) {
-    const slot = pickRequestDateSlot(request, filters.date);
+    const scheduleLine = formatRequestListScheduleLine(request.request_dates, {
+      filterDate: filters.date,
+    });
     const content = (
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -65,14 +66,7 @@ export function DashboardRequestPanel({
             {request.requested_location?.name_th ?? request.requested_location_text ?? "-"}
           </p>
           <p className="text-xs text-muted-foreground">
-            {slot ? (
-              <>
-                {formatThaiDate(slot.request_date)} · {formatTimeRange(slot.start_time, slot.end_time)}
-              </>
-            ) : (
-              "ยังไม่ระบุวันที่จอด"
-            )}{" "}
-            · {request.cars_count} คัน
+            {scheduleLine} · {request.cars_count} คัน
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">

@@ -10,12 +10,18 @@ export function SecurityParkingCalendar({
   maxMobileDays = 14,
   showDesktop = true,
   emptyMessage,
+  groupByRequest = true,
+  includePastEvents = false,
+  maxPastDays = 90,
 }: {
   events: CalendarEvent[];
   todayIso: string;
   maxMobileDays?: number;
   showDesktop?: boolean;
   emptyMessage?: string;
+  groupByRequest?: boolean;
+  includePastEvents?: boolean;
+  maxPastDays?: number;
 }) {
   return (
     <ParkingCalendarView
@@ -24,7 +30,10 @@ export function SecurityParkingCalendar({
       detailPathPrefix="/security/jobs"
       maxMobileDays={maxMobileDays}
       showDesktop={showDesktop}
+      groupByRequest={groupByRequest}
       emptyMessage={emptyMessage}
+      includePastEvents={includePastEvents}
+      maxPastDays={maxPastDays}
     />
   );
 }

@@ -9,6 +9,7 @@ import {
   CardTitle,
   CompletionPhotoGallery,
   PageHeader,
+  RequestParkingDatesDisplay,
   Separator,
 } from "@nacc/ui";
 import {
@@ -24,7 +25,6 @@ import {
   formatBytes,
   formatPhone,
   formatThaiDate,
-  formatTimeRange,
   resolveAttachmentViewUrl,
 } from "@nacc/utils";
 import { SecurityJobActions } from "@/components/security-job-actions";
@@ -122,20 +122,7 @@ export default async function SecurityJobDetailPage({
               </div>
               <div>
                 <p className="mb-1.5 text-sm font-medium text-muted-foreground">{TH.entity.requestedDate}</p>
-                <div className="flex flex-wrap gap-2">
-                  {request.request_dates.length ? (
-                    request.request_dates.map((date) => (
-                      <span key={date.id} className="rounded-md border border-border bg-muted/40 px-2.5 py-1 text-sm">
-                        {formatThaiDate(date.request_date)}
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          {formatTimeRange(date.start_time, date.end_time)}
-                        </span>
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </div>
+                <RequestParkingDatesDisplay dates={request.request_dates} />
               </div>
               <div>
                 <p className="mb-1.5 text-sm font-medium text-muted-foreground">{TH.entity.licensePlate}</p>

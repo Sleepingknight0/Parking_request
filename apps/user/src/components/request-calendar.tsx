@@ -2,6 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import {
+  isCalendarEventPast,
+  mergeCalendarEventsForFullCalendar,
+  resolveCalendarEventColor,
+} from "@nacc/utils";
+import { cn } from "@nacc/ui";
 
 export interface CalendarEvent {
   id: string;
@@ -52,11 +58,17 @@ function CalendarFallback({
           ยังไม่มีรายการในปฏิทิน
         </p>
       ) : (
-        visibleEvents.map((event) => (
+        visibleEvents.map((event) => {
+          const displayColor = resolveCalendarEventColor(event.color, event.start, event.end);
+          const isPast = isCalendarEventPast(event.start, event.end);
+          return (
           <button
             key={event.id}
             type="button"
-            className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent"
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent",
+              isPast && "opacity-70",
+            )}
             onClick={() =>
               router.push(
                 onEventClickPath
@@ -67,14 +79,22 @@ function CalendarFallback({
           >
             <span
               className="h-3 w-3 shrink-0 rounded-full"
-              style={{ backgroundColor: event.color }}
+              style={{ backgroundColor: displayColor }}
             />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{event.title}</span>
+              <span
+                className={cn(
+                  "block truncate text-sm font-medium",
+                  isPast && "text-muted-foreground",
+                )}
+              >
+                {event.title}
+              </span>
               <span className="block text-xs text-muted-foreground">{event.start}</span>
             </span>
           </button>
-        ))
+          );
+        })
       )}
     </div>
   );
@@ -90,6 +110,7 @@ export function RequestCalendar({
   const router = useRouter();
   const [runtime, setRuntime] = React.useState<CalendarRuntime | null>(null);
   const [failed, setFailed] = React.useState(false);
+  const desktopEvents = React.useMemo(() => mergeCalendarEventsForFullCalendar(events), [events]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -118,7 +139,7 @@ export function RequestCalendar({
     };
   }, []);
 
-  const fallback = <CalendarFallback events={events} onEventClickPath={onEventClickPath} />;
+  const fallback = <CalendarFallback events={desktopEvents} onEventClickPath={onEventClickPath} />;
 
   return (
     <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
@@ -135,11 +156,12 @@ export function RequestCalendar({
               center: "title",
               right: "dayGridMonth",
             }}
-            events={events.map((e) => ({
+            events={desktopEvents.map((e) => ({
               id: e.id,
-              title: e.title,
+              title: e.subtitle ? `${e.title} · ${e.subtitle}` : e.title,
               start: e.start,
               end: e.end,
+              allDay: e.allDay === true,
               backgroundColor: e.color,
               borderColor: e.color,
               extendedProps: { requestId: e.requestId },

@@ -7,13 +7,13 @@ import { DASHBOARD_URGENT_CALENDAR_DAYS } from "@/lib/parking-calendar-constants
 export function buildParkingCalendarEvents(rows: ParkingRequestListItem[]): CalendarEvent[] {
   return rows.flatMap((row) =>
     row.request_dates.map((date) => {
-      const timeLabel = formatTimeRange(date.start_time, date.end_time) || undefined;
+      const timeLabel = formatTimeRange(date.start_time, date.end_time);
       const start = date.start_time ? `${date.request_date}T${date.start_time}` : date.request_date;
       return {
         id: `${row.id}-${date.request_date}`,
         requestId: row.id,
         title: `${row.official_letter_no} · ${row.department?.short_name || row.department?.name_th || ""}`,
-        subtitle: timeLabel,
+        subtitle: timeLabel !== "-" ? timeLabel : undefined,
         timeLabel,
         start,
         end: date.end_time ? `${date.request_date}T${date.end_time}` : undefined,

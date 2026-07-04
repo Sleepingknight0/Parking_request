@@ -740,10 +740,41 @@
 - หน้ารายละเอียด officer แสดงชื่อเจ้าหน้าที่ที่รับเรื่อง
 - Migration `0011` apply บน Supabase hosted แล้ว (ตาราง + seed 13 รายชื่อ)
 
-### สาเหตุ Local dropdown ว่าง (ก่อนแก้)
+### Checks
 
-1. Migration ยังไม่ถูก apply บน DB จริง → ตาราง `security_officers` ไม่มี
-2. โค้ดเดิมแสดง dropdown เฉพาะโหมด comms เท่านั้น
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass
+
+## 2026-06-25 — ปฏิทิน + รายการ: รวมวันที่ต่อคำขอ (ทุกหน้า)
+
+### Done
+
+- `packages/utils/src/calendar-grouping.ts` — `formatRequestParkingSchedule`, `formatRequestListScheduleLine`
+- เปิด `groupByRequest=true` เป็นค่าเริ่มต้นใน `ParkingMobileCalendar`, `AdminMobileCalendar`, `ParkingCalendarView`, `SecurityParkingCalendar` (ครอบคลุมปฏิทินเต็ม officer/comms/security/admin)
+- รายการคำขอแสดงช่วงวันที่รวม (เช่น `04/07/2569 – 07/07/2569 (4 วัน)`) แทนวันเดียว + `-`:
+  - `dashboard-request-panel`, `officer-requests-list`, `comms-requests-list`, `admin-requests-panel`
+- หน้าหลัก comms: เพิ่ม **ปฏิทินด่วน** เหมือน officer
+- แก้ subtitle ปฏิทิน security ไม่แสดง `-` เมื่อไม่มีเวลา
+
+### ยังต้องตั้งค่า production (Google Sheets sync)
+
+- Vercel **user app**: `NEXT_PUBLIC_ADMIN_APP_URL`, `SYNC_WEBHOOK_SECRET` (ต้องตรงกับ admin)
+- Local: เพิ่ม `SYNC_WEBHOOK_SECRET` ใน `apps/user/.env.local` ถ้าต้องการทดสอบ sync จากเครื่อง
+
+### Checks
+
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass
+
+## 2026-06-25 — ปฏิทินใหญ่ + สีเทาเมื่องานผ่านกำหนด
+
+### Done
+
+- Helper ร่วม: `isCalendarEventPast`, `resolveCalendarEventColor`, `mergeCalendarEventsForFullCalendar`, `PAST_CALENDAR_EVENT_COLOR`
+- **ปฏิทินใหญ่ (FullCalendar):** รวมวันที่ติดกันเป็นหนึ่งแถบต่อคำขอ แทนการซ้ำทุกวัน
+- **ทั้งปฏิทินใหญ่และรายการมือถือ:** งานที่เลยวัน/เวลาที่กำหนดแล้วแสดงสีเทา (`#94a3b8`) + ข้อความจาง
+- หน้าปฏิทินเต็ม officer/comms/security/admin: แสดงงานในอดีต (90 วันย้อนหลัง) เป็นสีเทา
+- ปฏิทินด่วนหน้าแรก: ยังแสดงเฉพาะงานข้างหน้า (ไม่รกด้วยงานเก่า)
 
 ### Checks
 

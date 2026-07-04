@@ -29,6 +29,8 @@ export default async function CommsCalendarPage() {
         events={events}
         todayIso={today}
         detailPathPrefix="/comms/requests"
+        includePastEvents
+        maxMobileDays={90}
       />
     </>
   );

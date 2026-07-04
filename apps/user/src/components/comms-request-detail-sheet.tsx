@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  RequestParkingDatesDisplay,
   Separator,
   StatusBadge,
 } from "@nacc/ui";
@@ -25,7 +26,7 @@ import {
   type ParkingRequestWithRelations,
   type RequestStatus,
 } from "@nacc/types";
-import { formatPhone, formatThaiDate, formatTimeRange } from "@nacc/utils";
+import { formatPhone, formatThaiDate } from "@nacc/utils";
 import { CommsAttachmentUploader } from "./comms-attachment-uploader";
 import { CommsRequestActions } from "./comms-request-actions";
 import { CommsVerificationBadge } from "./comms-verification-badge";
@@ -151,23 +152,7 @@ export function CommsRequestDetailSheet({
 
               <div>
                 <p className="mb-1.5 text-xs text-muted-foreground">{TH.entity.requestedDate}</p>
-                <div className="flex flex-wrap gap-2">
-                  {request.request_dates.length ? (
-                    request.request_dates.map((date) => (
-                      <span
-                        key={date.id}
-                        className="rounded-md border border-border bg-muted/40 px-2.5 py-1 text-sm"
-                      >
-                        {formatThaiDate(date.request_date)}
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          {formatTimeRange(date.start_time, date.end_time)}
-                        </span>
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </div>
+                <RequestParkingDatesDisplay dates={request.request_dates} />
               </div>
 
               {request.request_license_plates.length ? (

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { mergeCalendarEventsForFullCalendar } from "@nacc/utils";
 import { AdminMobileCalendar } from "./admin-mobile-calendar";
 import type { CalendarEvent } from "./calendar-event";
 
@@ -37,6 +38,7 @@ export function RequestCalendar({
 }) {
   const router = useRouter();
   const today = todayIso ?? new Date().toISOString().slice(0, 10);
+  const desktopEvents = React.useMemo(() => mergeCalendarEventsForFullCalendar(events), [events]);
   const [runtime, setRuntime] = React.useState<CalendarRuntime | null>(null);
   const [failed, setFailed] = React.useState(false);
 
@@ -72,6 +74,7 @@ export function RequestCalendar({
       events={events}
       todayIso={today}
       maxDays={90}
+      includePastEvents
       emptyMessage="ยังไม่มีงานจอดรถในปฏิทิน"
     />
   );
@@ -84,6 +87,8 @@ export function RequestCalendar({
           todayIso={today}
           className="space-y-4"
           hideOnDesktop
+          includePastEvents
+          maxDays={90}
         />
       </div>
 
@@ -105,11 +110,12 @@ export function RequestCalendar({
                 center: "title",
                 right: "dayGridMonth,timeGridWeek",
               }}
-              events={events.map((e) => ({
+              events={desktopEvents.map((e) => ({
                 id: e.id,
-                title: e.title,
+                title: e.subtitle ? `${e.title} · ${e.subtitle}` : e.title,
                 start: e.start,
                 end: e.end,
+                allDay: e.allDay === true,
                 backgroundColor: e.color,
                 borderColor: e.color,
                 extendedProps: { requestId: e.requestId },

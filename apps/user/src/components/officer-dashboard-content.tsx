@@ -102,6 +102,7 @@ export function OfficerDashboardContent({ rows }: { rows: OfficerDashboardRow[] 
             detailPathPrefix="/officer/requests"
             maxMobileDays={DASHBOARD_URGENT_CALENDAR_DAYS}
             showDesktop={false}
+            groupByRequest
             emptyMessage={`ไม่มีคำขอในช่วง ${DASHBOARD_URGENT_CALENDAR_DAYS} วันข้างหน้า`}
           />
         </section>

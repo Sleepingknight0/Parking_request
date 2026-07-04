@@ -1,6 +1,6 @@
 import type { createServiceClient } from "@nacc/db/service";
 import type { RequestStatus } from "@nacc/types";
-import { formatTimeRange } from "@nacc/utils";
+import { formatTimeRange, resolveCalendarEventColor } from "@nacc/utils";
 import type { CalendarEvent } from "@/components/request-calendar";
 import { addDaysIso } from "@/lib/date-iso";
 import { DASHBOARD_URGENT_CALENDAR_DAYS } from "@/lib/parking-calendar-constants";
@@ -42,16 +42,17 @@ export function mapCalendarRowsToEvents(
         p.requested_location?.name_th ?? p.requested_location_text ?? "ยังไม่ระบุสถานที่";
       const start = r.start_time ? `${r.request_date}T${r.start_time}` : r.request_date;
       const end = r.end_time ? `${r.request_date}T${r.end_time}` : undefined;
-      const timeLabel = formatTimeRange(r.start_time, r.end_time) || undefined;
+      const timeLabel = formatTimeRange(r.start_time, r.end_time);
+      const baseColor = getSecurityEventColor(p.status, r.request_date, todayIso);
       return {
         id: `${p.id}-${r.request_date}`,
         requestId: p.id,
         title: `${location} · ${p.cars_count} คัน`,
-        subtitle: timeLabel,
+        subtitle: timeLabel !== "-" ? timeLabel : undefined,
         timeLabel,
         start,
         end,
-        color: getSecurityEventColor(p.status, r.request_date, todayIso),
+        color: resolveCalendarEventColor(baseColor, start, end),
       };
     });
 }

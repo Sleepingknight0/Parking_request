@@ -113,6 +113,7 @@ export function AdminDashboardContent({
             events={urgentEvents}
             todayIso={today}
             maxDays={DASHBOARD_URGENT_CALENDAR_DAYS}
+            groupByRequest
             emptyMessage={`ไม่มีคำขอในช่วง ${DASHBOARD_URGENT_CALENDAR_DAYS} วันข้างหน้า`}
           />
         </section>
