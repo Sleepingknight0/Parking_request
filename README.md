@@ -4,6 +4,8 @@ Parking request management for the Office of the National Anti-Corruption Commis
 
 Two separate Next.js apps share one Supabase project, database, auth, storage bucket, and set of TypeScript packages. All user-facing UI is Thai.
 
+**[Live admin app →](https://parking-request-admin.vercel.app)**
+
 | App | Package | Port | Audience |
 |-----|---------|------|----------|
 | `apps/admin` | `@nacc/admin` | 3000 | Admins and officers — review, approve, assign, dashboard, calendar, reports |
@@ -127,3 +129,7 @@ Read these before changing the schema or the request lifecycle:
 ## Deploy
 
 Both apps deploy to Vercel from this monorepo, each with its own project root (`apps/admin`, `apps/user`) and its own environment variables. See `docs/DEPLOYMENT.md`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
