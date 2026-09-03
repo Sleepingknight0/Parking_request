@@ -22,7 +22,7 @@ The production interface is localized for Thai staff. This documentation is main
 
 - Register parking requests linked to official correspondence.
 - Review, approve, reject, cancel, assign, and complete requests.
-- Manage multiple dates, licence plates, locations, attachments, and completion photos.
+- Manage multiple dates, license plates, locations, attachments, and completion photos.
 - Provide role-specific dashboards, calendars, queues, and detail views.
 - Generate and print security signage.
 - Synchronize operational data with Google Sheets.
