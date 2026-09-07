@@ -4,12 +4,12 @@
 
 This is a Thai government-style parking request management system for NACC parking letters.
 
-There are two separated web apps:
+There are two separate web apps:
 
 - `apps/admin`
 - `apps/user`
 
-Both apps share the same Supabase project, PostgreSQL database, Supabase Auth, Supabase Storage bucket, realtime setup, and shared TypeScript packages.
+Both apps share the same Supabase project, PostgreSQL database, Supabase Auth, Supabase Storage, Realtime, and shared TypeScript packages.
 
 ## Hard Rules
 
