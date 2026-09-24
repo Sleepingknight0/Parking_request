@@ -2,7 +2,7 @@
 
 A role-based parking request and field-operations platform for the Office of the National Anti-Corruption Commission.
 
-The monorepo contains separate administration and operational applications that share one Supabase project, PostgreSQL database, authentication system, storage layer, and TypeScript package set.
+The monorepo contains separate administration and operational applications that share one Supabase project, PostgreSQL database, authentication system, storage layer, and a shared set of TypeScript packages.
 
 ## Live applications
 
@@ -27,7 +27,7 @@ The production interface is localized for Thai staff. This documentation is main
 - Generate and print security signage.
 - Synchronize operational data with Google Sheets.
 - Store official files in Supabase Storage and completion media through supported storage providers.
-- Maintain realtime request lists and audit history.
+- Maintain real-time request lists and audit history.
 
 ## Technology stack
 
